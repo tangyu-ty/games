@@ -2,6 +2,8 @@
 
 原创浏览器航海动作冒险。驾驶信舟穿过失联的群岛，调查被篡改的救援航线，在亲人的重逢、旧日责任与海的回声之间，把十二封信送到终点。
 
+![潮汐信使的港口与船型选择](docs/screenshots/menu.jpg)
+
 ## 直接游玩
 
 下载 `dist/tidekeeper.html`，用浏览器打开。美术、角色肖像、音乐、剧情和全部玩法都内置在这一文件中，无需安装运行依赖或下载资源包。
@@ -28,6 +30,8 @@ npm start
 **短途试炼**
 
 原版五海域动作远航。三艘不同性能的船、三档海况、十二种可叠加遗物、两阶段守望者、沉船打捞、连击、成就、信件档案与本地最高分。适合反复挑战不同搭配。
+
+![故事开场与角色对话](docs/screenshots/story.jpg)
 
 ## 操作
 
@@ -76,4 +80,4 @@ node scripts/campaign-playtest.mjs --output artifacts/campaign-playtest
 
 代码：`main.js` 核心战斗与输入；`campaign.js` 故事界面、选择与存档；`campaign-engine.js` 任务；`story.js` 完整长篇剧情；`render.js` 原创美术；`content.js` 短途内容与肖像；`audio.js` 原创程序音乐。
 
-验证记录见 `QA.md`。早期长测记录保留在 `validation/iteration-history.json`；用户已取消十小时发布门槛，旧自动发布流程已停止，历史说明见 `LONG_RUN.md`。
+已完成 59 项回归，以及 66 分 35 秒的一轮完整自然输入战役通关（含模拟阅读；12 章、36 项任务）。验证记录与两项后续修复的范围见 `QA.md`，公开证据摘要见 `validation/campaign-playthrough.json`。早期长测记录保留在 `validation/iteration-history.json`；用户已取消十小时发布门槛，旧自动发布流程已停止，历史说明见 `LONG_RUN.md`。

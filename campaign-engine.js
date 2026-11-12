@@ -212,7 +212,7 @@ export class CampaignEngine {
   if(spec.type==='defend')this.state.remaining=Math.max(0,spec.duration-this.elapsed);
   else if(spec.type==='race'){
    const gate=g.missionObjects.find(o=>!o.optional);
-   if(gate&&distance(g.player,gate)<65){this.state.routeIndex++;this.state.laps=Math.floor(this.state.routeIndex/ROUTE.length);if(this.state.routeIndex<this.state.totalGates){const p=this.safePoint(ROUTE[this.state.routeIndex%ROUTE.length]);gate.x=p.x;gate.y=p.y;gate.name='航道浮标 '+(this.state.routeIndex+1);gate.progress=this.state.routeIndex/this.state.totalGates;g.audio?.sfx('pickup');}}
+   if(gate&&this.state.routeIndex<this.state.totalGates&&distance(g.player,gate)<65){this.state.routeIndex++;this.state.laps=Math.floor(this.state.routeIndex/ROUTE.length);if(this.state.routeIndex<this.state.totalGates){const p=this.safePoint(ROUTE[this.state.routeIndex%ROUTE.length]);gate.x=p.x;gate.y=p.y;gate.name='航道浮标 '+(this.state.routeIndex+1);gate.progress=this.state.routeIndex/this.state.totalGates;g.audio?.sfx('pickup');}}
   }else if(spec.type==='hunt'){
    if(!g.enemies.some(e=>!e.dead&&e.missionRole===this.state.currentCaptainRole)){
     this.state.captainsDefeated++;if(this.state.captainsDefeated<spec.captains)this.spawnCaptain();

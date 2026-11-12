@@ -1,0 +1,308 @@
+{
+  "schemaVersion": 1,
+  "game": "潮汐信使 · 群岛回声",
+  "candidateCommit": "ae1c0d6e6995647e0ad16afcf5751e01d7c9dee2",
+  "startedAt": "2026-11-12T06:03:38.973Z",
+  "finishedAt": "2026-11-12T07:10:13.660Z",
+  "status": "complete",
+  "campaignWon": true,
+  "coverage": {
+    "completedChapters": 12,
+    "observedMissions": 36,
+    "completedMissions": 36,
+    "choices": 12
+  },
+  "timing": {
+    "wallSeconds": 3994.687,
+    "validatedPlayingSeconds": 2426.764,
+    "dialoguePanelWallSeconds": 1311.872,
+    "simulatedReadingCharactersPerMinute": 900
+  },
+  "faultCount": 0,
+  "retryCount": 0,
+  "warnings": [],
+  "productSourceSha256": "a57148f9a85d53cd3d3586a68a9181a59c2ca1ac1565d307f44d4cb34dc87db1",
+  "sourceUnchangedDuringRun": true,
+  "method": "One natural story-campaign playthrough through standard controller axes/buttons and actual UI clicks. Engine updates only through requestAnimationFrame; no changed stats, health, objectives, timers, manual update calls, or accelerated clocks. Reading is an explicit simulated reading delay, not a claim of human reading.",
+  "missionLog": [
+    {
+      "chapter": 0,
+      "leg": 0,
+      "reason": "story_progression_interlude",
+      "wallSeconds": 45.561354537999996,
+      "at": "2026-11-12T06:05:03.175Z"
+    },
+    {
+      "chapter": 0,
+      "leg": 1,
+      "reason": "story_progression_choice",
+      "wallSeconds": 60.83841271200001,
+      "at": "2026-11-12T06:06:26.620Z"
+    },
+    {
+      "chapter": 0,
+      "leg": 2,
+      "reason": "story_progression_closing",
+      "wallSeconds": 92.34371976699998,
+      "at": "2026-11-12T06:08:15.303Z"
+    },
+    {
+      "chapter": 1,
+      "leg": 0,
+      "reason": "story_progression_interlude",
+      "wallSeconds": 87.26251347800002,
+      "at": "2026-11-12T06:10:49.624Z"
+    },
+    {
+      "chapter": 1,
+      "leg": 1,
+      "reason": "story_progression_choice",
+      "wallSeconds": 59.782131763999985,
+      "at": "2026-11-12T06:12:11.269Z"
+    },
+    {
+      "chapter": 1,
+      "leg": 2,
+      "reason": "story_progression_closing",
+      "wallSeconds": 35.586040819999994,
+      "at": "2026-11-12T06:13:04.744Z"
+    },
+    {
+      "chapter": 2,
+      "leg": 0,
+      "reason": "story_progression_interlude",
+      "wallSeconds": 64.88063300900001,
+      "at": "2026-11-12T06:15:13.458Z"
+    },
+    {
+      "chapter": 2,
+      "leg": 1,
+      "reason": "story_progression_choice",
+      "wallSeconds": 108.20840395000005,
+      "at": "2026-11-12T06:17:23.746Z"
+    },
+    {
+      "chapter": 2,
+      "leg": 2,
+      "reason": "story_progression_closing",
+      "wallSeconds": 32.43578835699998,
+      "at": "2026-11-12T06:18:12.265Z"
+    },
+    {
+      "chapter": 3,
+      "leg": 0,
+      "reason": "story_progression_interlude",
+      "wallSeconds": 63.64201947099991,
+      "at": "2026-11-12T06:20:19.755Z"
+    },
+    {
+      "chapter": 3,
+      "leg": 1,
+      "reason": "story_progression_choice",
+      "wallSeconds": 65.19394875799992,
+      "at": "2026-11-12T06:21:47.425Z"
+    },
+    {
+      "chapter": 3,
+      "leg": 2,
+      "reason": "story_progression_closing",
+      "wallSeconds": 84.21953074600015,
+      "at": "2026-11-12T06:23:28.714Z"
+    },
+    {
+      "chapter": 4,
+      "leg": 0,
+      "reason": "story_progression_interlude",
+      "wallSeconds": 87.98477379299993,
+      "at": "2026-11-12T06:26:02.408Z"
+    },
+    {
+      "chapter": 4,
+      "leg": 1,
+      "reason": "story_progression_choice",
+      "wallSeconds": 34.73321022499999,
+      "at": "2026-11-12T06:27:00.026Z"
+    },
+    {
+      "chapter": 4,
+      "leg": 2,
+      "reason": "story_progression_closing",
+      "wallSeconds": 39.42319807900003,
+      "at": "2026-11-12T06:27:55.042Z"
+    },
+    {
+      "chapter": 5,
+      "leg": 0,
+      "reason": "story_progression_interlude",
+      "wallSeconds": 55.094584209000004,
+      "at": "2026-11-12T06:29:55.902Z"
+    },
+    {
+      "chapter": 5,
+      "leg": 1,
+      "reason": "story_progression_choice",
+      "wallSeconds": 56.326500774999886,
+      "at": "2026-11-12T06:31:15.987Z"
+    },
+    {
+      "chapter": 5,
+      "leg": 2,
+      "reason": "story_progression_closing",
+      "wallSeconds": 124.205922246,
+      "at": "2026-11-12T06:33:36.975Z"
+    },
+    {
+      "chapter": 6,
+      "leg": 0,
+      "reason": "story_progression_interlude",
+      "wallSeconds": 102.73656818199993,
+      "at": "2026-11-12T06:36:26.858Z"
+    },
+    {
+      "chapter": 6,
+      "leg": 1,
+      "reason": "story_progression_choice",
+      "wallSeconds": 59.64130304399987,
+      "at": "2026-11-12T06:37:49.000Z"
+    },
+    {
+      "chapter": 6,
+      "leg": 2,
+      "reason": "story_progression_closing",
+      "wallSeconds": 143.10251125800005,
+      "at": "2026-11-12T06:40:30.011Z"
+    },
+    {
+      "chapter": 7,
+      "leg": 0,
+      "reason": "story_progression_interlude",
+      "wallSeconds": 128.2597452709997,
+      "at": "2026-11-12T06:43:44.814Z"
+    },
+    {
+      "chapter": 7,
+      "leg": 1,
+      "reason": "story_progression_choice",
+      "wallSeconds": 61.341388902999824,
+      "at": "2026-11-12T06:45:08.710Z"
+    },
+    {
+      "chapter": 7,
+      "leg": 2,
+      "reason": "story_progression_closing",
+      "wallSeconds": 90.95189722799978,
+      "at": "2026-11-12T06:46:57.270Z"
+    },
+    {
+      "chapter": 8,
+      "leg": 0,
+      "reason": "story_progression_interlude",
+      "wallSeconds": 54.55034840500002,
+      "at": "2026-11-12T06:48:58.572Z"
+    },
+    {
+      "chapter": 8,
+      "leg": 1,
+      "reason": "story_progression_choice",
+      "wallSeconds": 38.92051101399966,
+      "at": "2026-11-12T06:50:00.725Z"
+    },
+    {
+      "chapter": 8,
+      "leg": 2,
+      "reason": "story_progression_closing",
+      "wallSeconds": 44.43609776899984,
+      "at": "2026-11-12T06:51:02.687Z"
+    },
+    {
+      "chapter": 9,
+      "leg": 0,
+      "reason": "story_progression_interlude",
+      "wallSeconds": 131.76121025300017,
+      "at": "2026-11-12T06:54:22.122Z"
+    },
+    {
+      "chapter": 9,
+      "leg": 1,
+      "reason": "story_progression_choice",
+      "wallSeconds": 155.96233813599974,
+      "at": "2026-11-12T06:57:21.733Z"
+    },
+    {
+      "chapter": 9,
+      "leg": 2,
+      "reason": "story_progression_closing",
+      "wallSeconds": 66.61197550099996,
+      "at": "2026-11-12T06:58:46.040Z"
+    },
+    {
+      "chapter": 10,
+      "leg": 0,
+      "reason": "story_progression_interlude",
+      "wallSeconds": 65.39201638900022,
+      "at": "2026-11-12T07:00:59.158Z"
+    },
+    {
+      "chapter": 10,
+      "leg": 1,
+      "reason": "story_progression_choice",
+      "wallSeconds": 33.66724293800007,
+      "at": "2026-11-12T07:01:55.537Z"
+    },
+    {
+      "chapter": 10,
+      "leg": 2,
+      "reason": "story_progression_closing",
+      "wallSeconds": 43.77195484599997,
+      "at": "2026-11-12T07:02:57.308Z"
+    },
+    {
+      "chapter": 11,
+      "leg": 0,
+      "reason": "story_progression_interlude",
+      "wallSeconds": 56.10732818099996,
+      "at": "2026-11-12T07:04:59.374Z"
+    },
+    {
+      "chapter": 11,
+      "leg": 1,
+      "reason": "story_progression_choice",
+      "wallSeconds": 156.69166258199994,
+      "at": "2026-11-12T07:08:00.062Z"
+    },
+    {
+      "chapter": 11,
+      "leg": 2,
+      "reason": "story_progression_closing",
+      "wallSeconds": 49.13610869000013,
+      "at": "2026-11-12T07:09:07.167Z"
+    }
+  ],
+  "issuesObservedAndFixedAfterRun": [
+    {
+      "issue": "Waiting at the last race gate while the separate kill quota was unmet could count that gate repeatedly and make that checkpoint invalid.",
+      "fix": "Only count a physical crossing while routeIndex is below totalGates.",
+      "regression": "tests/campaign-engine-edge.test.mjs"
+    },
+    {
+      "issue": "The journal omitted the introduction, selected choice replies, and earned ending.",
+      "fix": "Keep the introduction, chapter scenes, chosen reply and earned ending in narrative order.",
+      "regression": "tests/journal-completeness.test.mjs"
+    }
+  ],
+  "scope": "The continuous natural run validates candidate A. The release adds the two focused fixes above; it is validated by dedicated regression tests and the complete release suite, not presented as a second hour-long run.",
+  "releaseRegression": {
+    "tests": 59,
+    "pass": 59,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "durationMilliseconds": 129614.872029,
+    "node": "v24.22.1",
+    "playwright": "1.65.0",
+    "browser": "Chromium 156.0.8078.79 built on Debian GNU/Linux 13 (trixie)",
+    "command": "npm test",
+    "finishedAt": "2026-11-12T07:13:30.017403+00:00",
+    "standaloneArtifactSha256": "d406f45b4f41655afc3769333d4b47130e3f9058c3ae561d96da1be4fad959a8"
+  }
+}
