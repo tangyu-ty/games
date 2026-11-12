@@ -1,0 +1,20 @@
+{
+  "name": "tidekeeper",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "潮汐信使 · 群岛回声 — twelve-chapter nautical story adventure and replayable sailing roguelite",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test --test-concurrency=1 tests/*.test.mjs",
+    "build": "node build.mjs",
+    "pretest": "node build.mjs",
+    "test:soak": "node scripts/soak.mjs --hours 10"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "playwright": "1.65.0"
+  }
+}

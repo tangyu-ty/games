@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "attempt": "original",
+  "status": "failed_not_published",
+  "startedAt": "2026-11-11T16:24:44.083Z",
+  "finishedAt": "2026-11-11T20:25:23.744Z",
+  "wallSeconds": 14439.660976912,
+  "validatedPlayingSeconds": 11517.129475889094,
+  "counts": {
+    "runs": 78,
+    "wins": 76,
+    "losses": 0,
+    "browserRestarts": 1,
+    "screenshots": 12,
+    "heartbeats": 1420
+  },
+  "faultCount": 2,
+  "faults": [
+    {
+      "code": "browser_evaluate_error",
+      "at": "2026-11-11T20:16:35.066Z",
+      "detail": "Browser control sample timed out after 15000ms"
+    },
+    {
+      "code": "runner_error",
+      "at": "2026-11-11T20:25:03.462Z",
+      "detail": "page.screenshot: Timeout 10000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n\u001b[2m  - fonts loaded\u001b[22m\n\n    at run (/workspace/games/scripts/soak.mjs:141:83)"
+    }
+  ],
+  "periodicRegressionRoundsStarted": 7,
+  "periodicRegressionRoundsPassed32of32": 7,
+  "finalSourceSha256": "97d3b9b0263c1e00e30a151e66d89440cfb9c7fd9c0fa02c8a0e8433ae02714b",
+  "classification": "Observed browser/control/compositor responsiveness failure; no game page exception or game invariant failure was logged. Exact root cause is unproven.",
+  "resourceEvidence": {
+    "gameHeapPeakMiB": 34.68,
+    "cgroupMemoryLimitGiB": 32,
+    "cgroupMemoryPeakGiB": 1.9,
+    "oomKillCount": 0
+  },
+  "recoveryPolicy": "Retain original evidence. Retry only known infrastructure failures with a new full ten-hour attempt. Never credit this failed attempt or inactive downtime to a clean attempt.",
+  "rawSummarySha256": "f6ac74bd30b42babd4a66b7426817d16fda87fbf1945187a91a3aa937ace788e",
+  "rawEventsSha256": "b5ce2e862ff80323cca9414a653d0a1126c960451f8cef69f847bd83cfacc9bb"
+}

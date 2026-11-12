@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#102f37">
+  <meta name="description" content="驾驶一叶信舟，穿越失落群岛。潮汐信使是一款支持键鼠与手柄的海上动作冒险游戏。">
+  <title>潮汐信使 · TIDEKEEPER</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23102f37'/%3E%3Cpath d='M14 42h36L40 53H24z' fill='%23ecd8a5'/%3E%3Cpath d='M32 10v30H16z' fill='%23f7f1de'/%3E%3Cpath d='M36 15v25h14z' fill='%23dd8263'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <canvas id="gameCanvas" aria-label="潮汐信使游戏画面：海上航行与战斗"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <main id="menu" class="menu">
+    <div class="menu-panel">
+      <div class="edition"><span class="edition-symbol" aria-hidden="true">✳</span> 独立航海冒险 <span class="edition-line"></span> VOL. 02</div>
+      <p class="menu-kicker">A LETTER ACROSS THE SEA</p>
+      <h1>潮汐<span>信使<span class="title-dot">。</span></span></h1>
+      <div class="english-title"><span>TIDEKEEPER</span><span class="title-rule"></span></div>
+      <p class="menu-story">海吞没了归途，<br>却没能吞没那些尚未寄出的思念。</p>
+      <p class="menu-description">十二章故事，三十六段海路。<br>护送、救援、寻访，让群岛再次听见彼此。</p>
+      <div class="departure">
+        <label class="difficulty-label" for="difficulty">选择海况 <span>SEA CONDITIONS</span></label>
+        <div class="departure-row">
+          <select id="difficulty" aria-label="选择游戏难度">
+            <option value="story">平静海 · 故事</option>
+            <option value="normal" selected>季风海 · 标准</option>
+            <option value="storm">风暴海 · 挑战</option>
+          </select>
+          <span class="departure-star" aria-hidden="true">✦</span>
+        </div>
+        <button id="continueBtn" class="primary continue-button hidden">继续航行 <span aria-hidden="true">↗</span></button>
+        <button id="startBtn" class="primary start-button">扬帆启航 <span aria-hidden="true">↗</span></button>
+      </div>
+      <nav class="menu-nav" aria-label="游戏菜单">
+        <button id="guideBtn">航海手册 <span>01</span></button>
+        <button id="archiveBtn">群岛档案 <span>02</span></button>
+        <button id="settingsBtn">声音与设置 <span>03</span></button>
+      </nav>
+      <div id="menuRecord" class="menu-record">一艘小船，五片海域，一封必须送达的信。</div>
+      <div class="menu-bottom"><span class="small-compass" aria-hidden="true">✧</span><span>为所有仍在等待的人。</span><span class="offline-badge">离线可玩</span></div>
+    </div>
+    <div class="scene-caption" aria-hidden="true">
+      <span class="caption-coordinate">N 24° 18′ &nbsp; E 121° 06′</span>
+      <div class="caption-line"></div>
+      <p>信会抵达。<br><span>THE SEA REMEMBERS.</span></p>
+    </div>
+  </main>
+
+  <section id="hud" class="hud hidden" aria-label="航行状态">
+    <div class="hud-top">
+      <div class="region-card">
+        <span class="region-index">TIDEKEEPER / 航行日志</span>
+        <div id="regionLabel" class="region-name">白帆浅湾</div>
+        <div id="objectiveLabel" class="objective">守住航道，找回潮光</div>
+      </div>
+      <div class="voyage-card">
+        <div class="voyage-mark" aria-hidden="true">✦</div>
+        <div><span class="micro-label">当前航程</span><strong id="waveText">01 / 05</strong></div>
+      </div>
+      <div class="hud-actions">
+        <div class="currency"><span aria-hidden="true">◈</span><span id="shellText">0</span><span class="currency-label">潮贝</span></div>
+        <button id="soundBtn" class="icon-button" aria-label="切换声音" title="切换声音">♪</button>
+        <button id="pauseBtn" class="icon-button" aria-label="暂停游戏" title="暂停游戏 · Esc">Ⅱ</button>
+      </div>
+    </div>
+    <div class="hud-bottom">
+      <div class="ship-status">
+        <div class="health-label"><span>信舟耐久</span><strong id="hpText">100 / 100</strong></div>
+        <div class="health-track"><div id="hpFill" class="health-fill"></div><div class="health-ticks" aria-hidden="true"></div></div>
+        <div class="experience-row"><span id="levelText">LV. 1</span><div class="experience-track"><div id="xpFill"></div></div><span class="score-label">航海分 <strong id="scoreText">0</strong></span></div>
+      </div>
+      <div class="abilities">
+        <div class="ability"><div class="ability-heading"><span class="ability-symbol" aria-hidden="true">➶</span><span>踏浪</span><kbd>SPACE</kbd></div><div class="ability-track"><div id="dashFill"></div></div></div>
+        <div class="ability pulse"><div class="ability-heading"><span class="ability-symbol" aria-hidden="true">◎</span><span>潮汐共鸣</span><kbd>E</kbd></div><div class="ability-track"><div id="pulseFill"></div></div></div>
+        <div id="abilityHint" class="ability-hint">靠近潮光自动拾取 · 船炮自动瞄准</div>
+      </div>
+    </div>
+    <div class="game-footer"><span id="controlsHint">WASD / 方向键 航行 <i>·</i> 空格 踏浪 <i>·</i> E 共鸣 <i>·</i> Esc 暂停</span><span id="padStatus">手柄即插即用</span></div>
+  </section>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="游戏对话与菜单">
+    <div id="modalContent" class="modal-content"></div>
+  </div>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <div id="touchControls" class="touch-controls hidden" aria-label="触屏操作">
+    <div class="touch-dpad">
+      <button data-dir="up" class="touch-up" aria-label="向上航行">↑</button>
+      <button data-dir="left" class="touch-left" aria-label="向左航行">←</button>
+      <button data-dir="right" class="touch-right" aria-label="向右航行">→</button>
+      <button data-dir="down" class="touch-down" aria-label="向下航行">↓</button>
+    </div>
+    <div class="touch-abilities"><button id="touchDash" aria-label="踏浪">踏浪</button><button id="touchPulse" aria-label="潮汐共鸣">共鸣</button></div>
+  </div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
