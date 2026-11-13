@@ -92,11 +92,54 @@
     "scope": "One first-mission exploration using automated standard Gamepad API input and accelerated simulated reading; it does not establish human reading speed, total playtime, balance or full campaign completion."
   },
   "repairedCampaignRun": {
-    "statusAtObservation": "running",
+    "status": "failed",
     "runDirectory": "artifacts/deadcircuit-3d-campaign-repaired",
     "startedAt": "2026-11-13T16:12:00.293Z",
-    "observedAt": "2026-11-13T16:12:45.549Z",
+    "updatedAt": "2026-11-13T16:15:56.987Z",
+    "difficulty": "standard",
+    "simulatedReadingCharactersPerMinute": 600,
     "sourceSha256AtLoad": "b8eaa578291320eb9603c42cea7372d559fb3c5e149a5bf91aa98454b5b03ad6",
-    "scope": "Eighteen-mission run observed in progress; no success or playtime claim."
+    "sourceSha256AtEnd": "b8eaa578291320eb9603c42cea7372d559fb3c5e149a5bf91aa98454b5b03ad6",
+    "sourceUnchanged": true,
+    "wallSeconds": 236.701569336,
+    "validatedPlayingSeconds": 92.61666666666268,
+    "simulatedReadingSeconds": 119.18621988099997,
+    "completedMissions": 0,
+    "completedStages": 2,
+    "deaths": 5,
+    "retries": 5,
+    "errors": [
+      {
+        "code": "RUNNER_FAILURE",
+        "message": "Error: Natural pilot exhausted its checkpoint retry budget\n    at run (file:///workspace/games/deadcircuit/scripts/playtest.mjs:432:122)\n    at async file:///workspace/games/deadcircuit/scripts/playtest.mjs:453:5"
+      }
+    ],
+    "warnings": [],
+    "scope": "The standard-difficulty pilot exhausted its five checkpoint retries in the first mission; no full mission was completed. The recorded error was runner retry exhaustion."
+  },
+  "threeMissionStoryRun": {
+    "status": "complete",
+    "runDirectory": "artifacts/deadcircuit-3d-story-three",
+    "startedAt": "2026-11-13T16:16:50.989Z",
+    "updatedAt": "2026-11-13T16:34:09.477Z",
+    "difficulty": "story",
+    "simulatedReadingCharactersPerMinute": 1200,
+    "sourceSha256AtLoad": "b8eaa578291320eb9603c42cea7372d559fb3c5e149a5bf91aa98454b5b03ad6",
+    "sourceSha256AtEnd": "b8eaa578291320eb9603c42cea7372d559fb3c5e149a5bf91aa98454b5b03ad6",
+    "sourceUnchanged": true,
+    "wallSeconds": 1038.490748919,
+    "validatedPlayingSeconds": 654.6333333330651,
+    "simulatedReadingSeconds": 313.7315073569991,
+    "completedMissions": 3,
+    "completedStages": 12,
+    "fieldNotes": 6,
+    "deaths": 12,
+    "retries": 12,
+    "hospitalEscortRetries": 7,
+    "errors": [],
+    "warnings": [],
+    "coverageCompleteForRequestedThreeMissions": true,
+    "campaignWon": false,
+    "scope": "Automated Gamepad API exploration of three missions with simulated 1200-character-per-minute reading; no claim of real human playtime, full 18-mission completion or campaign balance."
   }
 }

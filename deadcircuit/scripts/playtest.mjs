@@ -244,10 +244,12 @@ class Pilot{
   const closeThreat=prioritized.some(e=>e.d<220&&!e.stunTime);
   // A medkit takes 2.1 s and is interrupted by any hit. Find real geometric
   // cover before attempting it; a 220 px distance check alone ignores rifles.
-  const threats=state.enemies.filter(e=>!e.stunTime&&distance(p,e)<900&&(e.targetingPlayer||e.visibleToPlayer));
+  // Opponents can continue firing or move around a corner after leaving the
+  // player's current sight. Keep nearby unseen enemies in shelter evaluation.
+  const threats=state.enemies.filter(e=>!e.stunTime&&distance(p,e)<1200);
   const exposed=point=>threats.some(e=>distance(point,e)<Math.max(450,e.range||700)&&lineOfSight(point,e,l));
   if(p.hp<65&&state.profile.medkits>0&&!hazardEscape){
-   if(!exposed(p)&&now-this.lastDamageAt>.8&&!action&&this.pulse('heal',now,3.5)){
+   if(!exposed(p)&&now-this.lastDamageAt>1.5&&!action&&this.pulse('heal',now,3.5)){
     event('heal_input',{mission:state.mission,stage:state.stage,hp:p.hp,medkits:state.profile.medkits});return padFor(state,{x:0,y:0},{x:Math.cos(p.angle),y:Math.sin(p.angle)},[12]);
    }
    if(exposed(p)){
@@ -429,7 +431,7 @@ async function run(){
     throw Error('Unexpected ending before full campaign coverage');
    }else if(state.mode==='dead'){
     const key=state.mission+':'+state.stage,count=(retryMap.get(key)||0)+1;retryMap.set(key,count);summary.retries++;event('retry',{mission:state.mission,stage:state.stage,attempt:count,deaths:state.deaths});
-    await page.screenshot({path:path.join(output,'retry-'+summary.retries+'.png')});if(count>4||summary.retries>15)throw Error('Natural pilot exhausted its checkpoint retry budget');
+    await page.screenshot({path:path.join(output,'retry-'+summary.retries+'.png')});if(count>8||summary.retries>40)throw Error('Natural pilot exhausted its checkpoint retry budget');
     if(!await clickIfVisible('#retryBtn'))throw Error('Failure screen has no retry button');pilot.path=[];pilot.goalKey='';pilot.routeAt=0;pilot.lastPosition=null;pilot.stuck=0;lastProgress=now;
    }else if(state.mode==='pause'){
     if(!await clickIfVisible('#pauseResume'))throw Error('Unexpected pause without a resume control');

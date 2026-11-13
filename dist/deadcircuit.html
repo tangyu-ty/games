@@ -3378,6 +3378,8 @@
       } catch {
       }
       this.campaignLoaded = false;
+      this.failureReason = "";
+      this.escortWarnings = /* @__PURE__ */ new Map();
       this.audio.setMuted(this.settings.mute);
       this.loadAvailable = this.readSave() != null;
     }
@@ -3448,6 +3450,8 @@
       this.ui?.render(mode);
     }
     startNew(difficulty = this.settings.difficulty) {
+      this.failureReason = "";
+      this.escortWarnings.clear();
       this.campaignLoaded = true;
       this.journalCampaign = null;
       this.practice = false;
@@ -3560,6 +3564,8 @@
     }
     startMission(id2 = this.campaign.mission) {
       if (!Number.isInteger(id2) || id2 < 0 || id2 >= LEVELS.length) return;
+      this.failureReason = "";
+      this.escortWarnings.clear();
       if (!this.practice) this.campaignLoaded = true;
       this.campaign.mission = id2;
       this.campaign.stage = 0;
@@ -3608,7 +3614,7 @@
       ;
     }
     startPractice() {
-      this.practiceReturn = { profile: clone(this.profile), campaign: clone(this.campaign), snapshot: this.level ? this.makeSnapshot() : null, checkpoint: this.checkpoint };
+      this.practiceReturn = { profile: clone(this.profile), campaign: clone(this.campaign), snapshot: this.level ? this.makeSnapshot() : null, checkpoint: this.checkpoint, failureReason: this.failureReason };
       this.practice = true;
       this.profile = this.freshProfile();
       this.profile.ownedWeapons = WEAPONS.map((w) => w.id);
@@ -3631,6 +3637,7 @@
       if (old) {
         this.profile = old.profile;
         this.campaign = old.campaign;
+        this.failureReason = old.failureReason || "";
         if (old.snapshot) this.restoreSnapshot(old.snapshot);
         else {
           this.level = null;
@@ -4135,9 +4142,17 @@
         actor.lastKnownPosition = { x: this.player?.x || source.x, y: this.player?.y || source.y };
         this.spawnEffect("hit", actor.x, actor.y, { height: Number.isFinite(source.height) ? source.height : void 0, color: actor.faction === "infected" ? "#accc8d" : "#f4ba7c" });
       }
+      if (actor.friendly && actor.following && actor.hp > 0) {
+        const key = actor.id || actor.name || "escort", prior = this.escortWarnings.get(key) || { at: -Infinity, critical: false }, critical = actor.hp <= (actor.maxHp || 180) * 0.3;
+        if (critical && !prior.critical || this.time - prior.at >= 5) {
+          this.toast((actor.name || "\u968F\u884C\u4EBA\u5458") + (critical ? "\u4F24\u52BF\u5371\u6025\uFF0C\u5C3D\u5FEB\u56DE\u63F4\uFF01" : "\u6B63\u53D7\u5230\u653B\u51FB\uFF0C\u8BF7\u4FDD\u62A4\u968F\u884C\u4EBA\u5458\u3002"));
+          this.escortWarnings.set(key, { at: this.time, critical });
+        }
+      }
       if (actor.hp <= 0) {
         actor.dead = true;
         if (actor === this.player || actor.friendly) {
+          this.failureReason = actor === this.player ? "\u4F60\u5DF2\u5012\u4E0B\uFF0C\u8BF7\u4ECE\u68C0\u67E5\u70B9\u91CD\u65B0\u51FA\u53D1\u3002" : (actor.name || "\u968F\u884C\u4EBA\u5458") + "\u5DF2\u5012\u4E0B\uFF0C\u62A4\u9001\u884C\u52A8\u4E2D\u65AD\u3002\u8BF7\u4ECE\u68C0\u67E5\u70B9\u91CD\u65B0\u51FA\u53D1\u5E76\u4FDD\u62A4\u968F\u884C\u4EBA\u5458\u3002";
           this.campaign.deaths++;
           this.campaign.phase = "dead";
           this.save();
@@ -4620,6 +4635,7 @@
         if (!o.following || o.delivered || o.stopped) continue;
         if (o.hp <= 0) {
           o.following = false;
+          this.failureReason = (o.name || "\u968F\u884C\u4EBA\u5458") + "\u5DF2\u5012\u4E0B\uFF0C\u62A4\u9001\u884C\u52A8\u4E2D\u65AD\u3002\u8BF7\u4ECE\u68C0\u67E5\u70B9\u91CD\u65B0\u51FA\u53D1\u5E76\u4FDD\u62A4\u968F\u884C\u4EBA\u5458\u3002";
           this.toast(o.name + "\u53D7\u4F24\uFF0C\u8FD4\u56DE\u68C0\u67E5\u70B9\u53EF\u91CD\u65B0\u6551\u63F4\u3002");
           this.campaign.phase = "dead";
           this.campaign.deaths++;
@@ -4717,7 +4733,7 @@
     save() {
       if (this.practice || !this.campaignLoaded) return;
       try {
-        const data = { version: 1, campaign: this.campaign, profile: this.profile, current: this.makeSnapshot(), checkpoint: this.checkpoint, lastResult: this.lastResult || null, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
+        const data = { version: 1, campaign: this.campaign, profile: this.profile, current: this.makeSnapshot(), checkpoint: this.checkpoint, lastResult: this.lastResult || null, failureReason: this.campaign.phase === "dead" ? this.failureReason : "", updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
         this.loadAvailable = true;
       } catch {
@@ -4745,6 +4761,8 @@
       this.journalCampaign = null;
       this.practice = false;
       this.campaign = this.normalizeCampaign(s36.campaign);
+      this.failureReason = this.campaign.phase === "dead" && typeof s36.failureReason === "string" ? s36.failureReason.slice(0, 200) : "";
+      this.escortWarnings.clear();
       this.campaign.completed = [...new Set(this.campaign.completed.filter((i) => Number.isInteger(i) && i >= 0 && i < 18))];
       this.campaign.journal = Array.isArray(this.campaign.journal) ? this.campaign.journal.slice(-2500) : [];
       this.profile = { ...this.freshProfile(), ...normalizeArmoryProfile(s36.profile), medkits: clamp(finite(s36.profile.medkits, 2), 0, 30), grenades: Object.fromEntries(["frag", "smoke", "flash"].map((k) => [k, clamp(finite(s36.profile.grenades?.[k], 2), 0, 20)])), scrap: clamp(finite(s36.profile.scrap), 0, 1e5) };
@@ -4771,6 +4789,8 @@
       } else this.prepareMission();
     }
     retry() {
+      this.failureReason = "";
+      this.escortWarnings.clear();
       if (!this.checkpoint || !this.restoreSnapshot(this.checkpoint)) {
         this.startMission();
         return;
