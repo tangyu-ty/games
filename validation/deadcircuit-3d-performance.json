@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 1,
+  "kind": "Controlled third-person 3D software-render performance samples; not natural campaign duration evidence",
+  "rendererSource": {
+    "path": "deadcircuit/render3d.js",
+    "sha256": "5bed454b7da8e8b00b5259f71364e870580ba9146e10ff3e625ae6f192ebc05f",
+    "hashRecordedAt": "2026-11-13T07:59:25.435771+00:00"
+  },
+  "capture": {
+    "sourceArtifactSha256": "8a1791d36dafb3d4719a1fd23b8be9821979f919a20b615c8e2cfbfdf10daa85",
+    "completedAt": "2026-11-13T07:50:32.008815+00:00",
+    "samples": 2,
+    "frameIntervalUnit": "milliseconds",
+    "averageFpsCalculation": "1000 / mean frame interval; not the arithmetic mean of instantaneous FPS"
+  },
+  "environment": {
+    "browser": "Chromium",
+    "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "quality": "software",
+    "hardwareGpuTested": false,
+    "hudPixels": [
+      1280,
+      800
+    ],
+    "internalFramebufferPixels": [
+      632,
+      395
+    ],
+    "devicePixelRatio": 0.49410588440130926
+  },
+  "method": {
+    "simulation": "Normal requestAnimationFrame updates and rendering during short controlled scene samples.",
+    "opening": "Mission index 0, no generated supply-object stress fixture.",
+    "finale": "Mission index 17, 25 explicitly seeded supply objects (13 armour, 12 ammunition) and one actual G-key fragmentation grenade.",
+    "durationScope": "Two approximately eight-second frame samples. Seeded objects and controlled scene setup are test fixtures, not naturally acquired gameplay or campaign completion time.",
+    "shaderWarmup": "The finale stress sample includes the first real explosion and its initial effect-shader compilation spike. It is not a fully warmed steady-state benchmark.",
+    "limitations": [
+      "Software rendering on Chromium/SwiftShader only; no hardware GPU performance measurement.",
+      "Not an end-to-end campaign throughput, endurance, or completion measurement.",
+      "No universal device, browser, or controller compatibility claim."
+    ]
+  },
+  "results": [
+    {
+      "missionIndex": 0,
+      "chapter": 1,
+      "fixture": "none",
+      "supplyInstances": [],
+      "frames": 213,
+      "sampledFrameIntervalTotalMilliseconds": 8016.3,
+      "meanFrameMilliseconds": 37.635211,
+      "averageFramesPerSecond": 26.570862,
+      "p95FrameMilliseconds": 50.1,
+      "maxFrameMilliseconds": 200,
+      "lastObservedMode": "playing",
+      "lastObservedPlayerHp": 88.45,
+      "drawCalls": 89,
+      "triangles": 8116,
+      "textures": 2,
+      "geometries": 6,
+      "cpuTimingProfile": {
+        "gameUpdate": {
+          "calls": 480,
+          "totalMilliseconds": 236.6,
+          "meanMillisecondsPerCall": 0.4929,
+          "maxMillisecondsPerCall": 8.1
+        },
+        "prepareAim": {
+          "calls": 215,
+          "totalMilliseconds": 107.9,
+          "meanMillisecondsPerCall": 0.5019,
+          "maxMillisecondsPerCall": 7
+        },
+        "webglSubmit": {
+          "calls": 215,
+          "totalMilliseconds": 259.8,
+          "meanMillisecondsPerCall": 1.2084,
+          "maxMillisecondsPerCall": 4.4
+        },
+        "drawTotal": {
+          "calls": 215,
+          "totalMilliseconds": 473.4,
+          "meanMillisecondsPerCall": 2.2019,
+          "maxMillisecondsPerCall": 11.1
+        }
+      }
+    },
+    {
+      "missionIndex": 17,
+      "chapter": 18,
+      "fixture": "25 seeded supply objects plus one real G-key grenade (not natural duration evidence)",
+      "supplyInstances": [
+        {
+          "type": "armor",
+          "count": 13
+        },
+        {
+          "type": "ammo",
+          "count": 12
+        }
+      ],
+      "frames": 163,
+      "sampledFrameIntervalTotalMilliseconds": 8116.4,
+      "meanFrameMilliseconds": 49.793865,
+      "averageFramesPerSecond": 20.082795,
+      "p95FrameMilliseconds": 116.5,
+      "maxFrameMilliseconds": 516.7,
+      "lastObservedMode": "playing",
+      "lastObservedPlayerHp": 100,
+      "drawCalls": 108,
+      "triangles": 12340,
+      "textures": 2,
+      "geometries": 6,
+      "cpuTimingProfile": {
+        "gameUpdate": {
+          "calls": 462,
+          "totalMilliseconds": 635.7,
+          "meanMillisecondsPerCall": 1.376,
+          "maxMillisecondsPerCall": 46.3
+        },
+        "prepareAim": {
+          "calls": 165,
+          "totalMilliseconds": 126.3,
+          "meanMillisecondsPerCall": 0.7655,
+          "maxMillisecondsPerCall": 4.4
+        },
+        "webglSubmit": {
+          "calls": 165,
+          "totalMilliseconds": 608.0,
+          "meanMillisecondsPerCall": 3.6848,
+          "maxMillisecondsPerCall": 285.2
+        },
+        "drawTotal": {
+          "calls": 165,
+          "totalMilliseconds": 849.9,
+          "meanMillisecondsPerCall": 5.1509,
+          "maxMillisecondsPerCall": 291.6
+        }
+      }
+    }
+  ],
+  "scriptErrors": [],
+  "omittedNonPerformanceTelemetry": [
+    "camera position and aim/muzzle coordinates; viewport dimensions are retained above"
+  ]
+}

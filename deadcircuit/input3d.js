@@ -6,6 +6,57 @@ const finite=(n,fallback=0)=>Number.isFinite(n)?n:fallback;
 const wrap=n=>Math.atan2(Math.sin(n),Math.cos(n));
 const editTarget=element=>!!element?.matches?.('input,select,textarea,[contenteditable="true"]');
 
+function aimSegmentBlocked(from,to,renderer){
+ const scale=renderer.unitScale||.02;
+ for(const collider of renderer.colliders||[]){
+  const def=collider.def;
+  if(def&&(def.active===false||def.destroyed||Number.isFinite(def.hp)&&def.hp<=0||collider.kind==='door'&&def.open))continue;
+  if(!def&&collider.collidable===false)continue;
+  const bounds=collider.bounds;
+  const box=def?{minX:def.x,maxX:def.x+def.w,minY:def.y,maxY:def.y+def.h,minH:0,maxH:collider.height||(collider.kind==='cover'?(def.low===false?2.3:1.05):3.2)}:bounds?{minX:bounds.min.x/scale,maxX:bounds.max.x/scale,minY:bounds.min.z/scale,maxY:bounds.max.z/scale,minH:bounds.min.y,maxH:bounds.max.y}:null;
+  if(!box)continue;
+  let near=0,far=1,intersects=true;
+  for(const [key,min,max]of[['x',box.minX,box.maxX],['y',box.minY,box.maxY],['height',box.minH,box.maxH]]){
+   const start=from[key],delta=to[key]-start;
+   if(Math.abs(delta)<1e-10){if(start<min||start>max){intersects=false;break;}continue;}
+   let a=(min-start)/delta,b=(max-start)/delta;if(a>b)[a,b]=[b,a];near=Math.max(near,a);far=Math.min(far,b);if(near>far){intersects=false;break;}
+  }
+  if(intersects&&near<.9999&&far>.0001)return true;
+ }
+ return false;
+}
+
+// Controller friction never invents a turn or changes a projectile. A player
+// actively moving the view stick gets a slightly larger precision window only
+// around a rendered, physically visible opponent close to the real crosshair.
+export function controllerLookAssist(g,yaw,pitch,stickX,stickY){
+ const unchanged={yaw,pitch,friction:1,targetId:null},input=g?.input,renderer=g?.renderer,p=g?.player;
+ if(!p||g.mode!=='playing'||g.settings?.aimAssist!==true||input?.lastDevice!=='gamepad'||!renderer?.is3D||typeof renderer.projectPoint!=='function'||Math.hypot(stickX,stickY)<.03)return unchanged;
+ const look=input.lookDelta||{};
+ if(Math.abs(look.mouseX||0)+Math.abs(look.mouseY||0)+Math.abs(look.touchX||0)+Math.abs(look.touchY||0)>0||input.touchAim)return unchanged;
+ renderer.updateCamera?.(g);
+ const camera=renderer.cameraData||g.camera3D;
+ if(!camera||![camera.x,camera.y,camera.height].every(Number.isFinite))return unchanged;
+ const range=Math.min(1600,g.weaponStats?.()?.range||1100),aspect=(renderer.width||camera.viewportWidth||1000)/(renderer.height||camera.viewportHeight||700),tan=Math.tan((camera.fov||64)*Math.PI/360),cone=.085;
+ let selected=null;
+ for(const enemy of g.enemies||[]){
+  if(enemy.dead||enemy.disabled||enemy.hp<=0||enemy.friendly||Math.hypot(enemy.x-p.x,enemy.y-p.y)>range)continue;
+  const model=renderer.actorMap?.get(enemy.id);if(!model||model.friendly||model.group?.visible===false)continue;
+  if(typeof g.hasSight!=='function'||!g.hasSight(p,enemy))continue;
+  const metrics=model.metrics||{base:0,height:1.75},height=(metrics.base||0)+(metrics.height||1.75)*.55;
+  const projected=renderer.projectPoint(enemy,height);
+  if(!projected?.visible||!projected.inFront||![projected.ndcX,projected.ndcY].every(Number.isFinite))continue;
+  const errorX=Math.atan(projected.ndcX*tan*aspect),errorY=Math.atan(projected.ndcY*tan),error=Math.hypot(errorX,errorY);
+  if(error>=cone||errorX*yaw+errorY*pitch<-.0000001)continue;
+  if(aimSegmentBlocked(camera,{x:enemy.x,y:enemy.y,height},renderer))continue;
+  const score=error+Math.hypot(enemy.x-p.x,enemy.y-p.y)*.000002;
+  if(!selected||score<selected.score)selected={id:enemy.id,error,score};
+ }
+ if(!selected)return unchanged;
+ const friction=1-.28*(1-selected.error/cone);
+ return{yaw:yaw*friction,pitch:pitch*friction,friction,targetId:selected.id};
+}
+
 export class Input3D{
  constructor(game,canvas){
   this.g=game;this.canvas=canvas;this.keys=new Set();this.pressed=new Set();this.released=new Set();
@@ -209,9 +260,11 @@ export class Input3D{
   const aim=this.mouse.aim||this.padDown(6)||this.touchActions.has('aim'),factor=aim?.55:1;
   const mouseSensitivity=clamp(finite(g.settings?.mouseSensitivity,.0026),.0005,.012),touchSensitivity=clamp(finite(g.settings?.touchSensitivity,.0052),.001,.02);
   const padSensitivity=clamp(finite(g.settings?.lookSensitivity,1),.25,3),invert=g.settings?.invertY?-1:1;
-  const yawDelta=this.lookDelta.mouseX*mouseSensitivity+this.lookDelta.touchX*touchSensitivity+this.axis(2)*2.4*padSensitivity*dt;
-  const pitchDelta=-(this.lookDelta.mouseY*mouseSensitivity+this.lookDelta.touchY*touchSensitivity+this.axis(3)*1.65*padSensitivity*dt)*invert;
-  p.angle=wrap(finite(p.angle)+yawDelta*factor);p.pitch=clamp(finite(p.pitch)+pitchDelta*factor,-1.08,1.08);
+  const rx=this.axis(2),ry=this.axis(3),assist=controllerLookAssist(g,rx*2.4*padSensitivity*dt*factor,-ry*1.65*padSensitivity*dt*invert*factor,rx,ry);
+  this.aimAssistTargetId=assist.targetId;
+  const yawDelta=(this.lookDelta.mouseX*mouseSensitivity+this.lookDelta.touchX*touchSensitivity)*factor+assist.yaw;
+  const pitchDelta=-(this.lookDelta.mouseY*mouseSensitivity+this.lookDelta.touchY*touchSensitivity)*invert*factor+assist.pitch;
+  p.angle=wrap(finite(p.angle)+yawDelta);p.pitch=clamp(finite(p.pitch)+pitchDelta,-1.08,1.08);
   this.lookDelta={mouseX:0,mouseY:0,touchX:0,touchY:0};
   let side=(this.down('KeyD','ArrowRight')?1:0)-(this.down('KeyA','ArrowLeft')?1:0)+this.axis(0)+this.touchMove.x;
   let forward=(this.down('KeyW','ArrowUp')?1:0)-(this.down('KeyS','ArrowDown')?1:0)-this.axis(1)-this.touchMove.y;

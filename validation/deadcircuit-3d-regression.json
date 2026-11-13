@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "kind": "Final third-person 3D release regression; controlled fixtures are not natural campaign duration evidence",
+  "status": "passed",
+  "command": "npm test",
+  "pretestCommand": "node build.mjs && node deadcircuit/build.mjs",
+  "testRunnerCommand": "node --test --test-concurrency=1 tests/*.test.mjs deadcircuit/tests/*.test.mjs",
+  "scope": "Both Tidekeeper and Dead Circuit, including actual 3D WebGL scenes, camera and input, ballistics, escort models, armory, AI, geometry, campaign branches, UI and standalone checks. Controlled fixtures do not establish a natural complete campaign or two-to-three-hour playtime.",
+  "sourceSha256": "5351851cfd47a63a232bb386da963fdc2f43ed6237bfea10f58298a530b8a9ed",
+  "tests": 180,
+  "pass": 180,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "todo": 0,
+  "durationMilliseconds": 443585.973418,
+  "finishedAt": "2026-11-13T08:11:24.610173+00:00",
+  "node": "v24.22.1",
+  "playwright": "1.65.0",
+  "three": "0.180.0",
+  "browser": "Chromium",
+  "standalonePath": "dist/deadcircuit.html",
+  "standaloneBytes": 1493003,
+  "standaloneSha256": "d7de9259bfdf95585a26149739638d5592150f42959bab76b70c16842b9b51c4",
+  "regressionLogSha256": "ee17aae2d9ba95166fd6c300bc11e51c9a501ebfc9be8db33c1483ee212b6c77",
+  "naturalCampaignValidation": {
+    "status": "in_progress",
+    "completed": false,
+    "scope": "Long-form natural-input campaign validation is still in progress; this regression report is not its completion evidence."
+  }
+}

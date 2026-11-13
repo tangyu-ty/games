@@ -112,3 +112,28 @@ test('touch camera swipes and independent fire are separate, and cancelling a co
  await page.keyboard.press('KeyM');await frames(page);assert.equal(await page.evaluate(()=>__fixture.mode),'journal');assert.equal(await page.evaluate(()=>__fixture.controls.fire),false);assert.equal(await page.evaluate(()=>Math.hypot(__fixture.input.touchMove.x,__fixture.input.touchMove.y)),0);
  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});assert.deepEqual(errors,[]);
 });
+
+test('real dialogue restore and nested modal returns accept the first Escape and keep held movement out of menus',async()=>{
+ const context=await browser.newContext({viewport:{width:1280,height:800}});contexts.add(context);
+ await context.addInitScript(()=>{
+  if(!localStorage.getItem('dead-circuit-settings-v1'))localStorage.setItem('dead-circuit-settings-v1',JSON.stringify({mute:true,reduced:true,screenShake:false}));
+  window.__modeTrace=[];
+  // A click bubbles here after its real UI handler but before the next rAF.
+  document.addEventListener('click',event=>{const g=window.__dc,id=event.target.closest?.('button')?.id;if(g&&id)window.__modeTrace.push({id,mode:g.mode,lastMode:g.input.lastMode});});
+ });
+ const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.stack||error.message));
+ await page.goto(base+'/deadcircuit/index.html?test=1');await page.locator('#newGameBtn').click();await page.locator('#dialogueNext').click();
+ await page.reload();await page.locator('#continueBtn').click();await page.keyboard.press('Escape');await page.locator('#pausePort').waitFor({state:'visible',timeout:5000});
+ await page.locator('#pauseResume').click();await page.keyboard.press('Escape');await page.locator('#pausePort').waitFor({state:'visible',timeout:5000});
+ await page.locator('#pauseSettings').click();await page.locator('#settingsBack').click();await page.keyboard.press('Escape');await page.locator('#dialogueText').waitFor({state:'visible',timeout:5000});
+ // Exercise the supported public journal entry with a dialogue return address.
+ await page.evaluate(()=>__dc.showJournal());assert.equal(await page.evaluate(()=>__dc.input.lastMode),'journal');
+ await page.locator('#journalBack').click();await page.keyboard.press('Escape');await page.locator('#pausePort').waitFor({state:'visible',timeout:5000});
+ const changes=await page.evaluate(()=>window.__modeTrace.filter(row=>['continueBtn','pauseResume','pauseSettings','settingsBack','journalBack'].includes(row.id)));
+ assert.ok(changes.length>=5);for(const row of changes)assert.equal(row.lastMode,row.mode,row.id+' synchronizes the input before the next animation frame');
+ await page.locator('#pauseResume').click();await page.locator('#dialogueSkip').click();await page.locator('#startMissionBtn').click();await page.locator('#dialogueSkip').click();
+ await page.evaluate(()=>{__dc.enemies=[];__dc.player.invulnerable=1e6;});
+ await page.keyboard.down('KeyD');await page.keyboard.press('KeyM');await page.locator('#journalBack').waitFor({state:'visible'});assert.equal(await page.evaluate(()=>__dc.input.keys.size),0);
+ await page.locator('#journalBack').click();await frames(page,4);assert.ok(await page.evaluate(()=>Math.hypot(__dc.controls.x,__dc.controls.y)<.001));assert.equal(await page.evaluate(()=>__dc.controls.fire),false);await page.keyboard.up('KeyD');
+ assert.deepEqual(errors,[]);
+});

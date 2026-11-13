@@ -1,39 +1,64 @@
 {
   "schemaVersion": 1,
-  "kind": "3D short controller diagnostic and isolated software-render measurements; not a campaign completion",
+  "kind": "Final short third-person 3D controller diagnostic; not a campaign completion or playtime-length proof",
+  "status": "diagnostic_complete",
+  "startedAt": "2026-11-13T08:02:19.922Z",
+  "finishedAt": "2026-11-13T08:03:51.346Z",
   "method": "Fresh campaign operated only through standard Gamepad axes/buttons and visible DOM controls. The pilot reads exposed world state for navigation and aiming. Game simulation advances only through the normal requestAnimationFrame loop; no stats, mission state, actor positions, health, clocks or update methods are changed. Reading delays are explicit simulated reading, not human reading.",
-  "wallSeconds": 65.71618606,
-  "validatedPlayingSeconds": 36.86666666666585,
-  "sourceSha256": "b77daedb19746742c4bfa4a734a26abd15b740525139457dd0dac7ae528663d2",
+  "wallSeconds": 91.43204241299999,
+  "validatedPlayingSeconds": 64.33333333333097,
+  "dialoguePanelWallSeconds": 19.77899051300001,
+  "simulatedReading": {
+    "charactersPerMinute": 2400,
+    "characters": 713,
+    "panels": 13,
+    "humanReadingClaim": false
+  },
+  "inputSamples": 630,
+  "deaths": 1,
+  "retries": 1,
+  "sourceSha256": "5351851cfd47a63a232bb386da963fdc2f43ed6237bfea10f58298a530b8a9ed",
+  "sourceSha256AtLoad": "5351851cfd47a63a232bb386da963fdc2f43ed6237bfea10f58298a530b8a9ed",
+  "sourceSha256Now": "5351851cfd47a63a232bb386da963fdc2f43ed6237bfea10f58298a530b8a9ed",
   "sourceUnchanged": true,
   "completedMissions": [],
-  "errors": [],
-  "warnings": [],
-  "diagnostic": {},
-  "frames": [
+  "completedStages": [],
+  "completedObjectives": [],
+  "observedStages": [
     {
       "mission": 0,
-      "meanMs": 40.082,
-      "p95Ms": 66.59999999999854,
-      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
-      "framebuffer": [
-        632,
-        395
-      ],
-      "drawCalls": 89
-    },
-    {
-      "mission": 17,
-      "meanMs": 36.513636363636365,
-      "p95Ms": 66.70000000000073,
-      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
-      "framebuffer": [
-        632,
-        395
-      ],
-      "drawCalls": 106
+      "stage": 0,
+      "title": "恢复站内通行"
     }
   ],
-  "render3dSha256": "76f78c0d3cf5d937a498d5c010fc18109ddfac98341c936d681a716d3dbb8745",
-  "standaloneSha256": "7ae05ebd6e567156795f3e34baf8230de636fa24348eeee13effdd8affec0b80"
+  "campaignWon": false,
+  "coverageComplete": false,
+  "errors": [],
+  "warnings": [],
+  "diagnostic": {
+    "requested": true,
+    "is3DObserved": true,
+    "movementPixels": 7524.0178893122475,
+    "yawTravel": 43.61914917802317,
+    "pitchTravel": 7.701191480333108,
+    "playerShots": 108,
+    "ballisticPlayerHitObserved": true,
+    "enemyHpReductionObservedIncludingCrossfire": 435,
+    "doorsOpenedByPad": [
+      "station-house-door"
+    ],
+    "completed": true
+  },
+  "testEnvironment": {
+    "browser": "Chromium",
+    "headless": true,
+    "difficulty": "standard",
+    "observedViewportPixels": [
+      1100,
+      720
+    ],
+    "physicalControllerTested": false
+  },
+  "scope": "The run confirms standard Gamepad movement, shoulder-camera yaw/pitch, observed player ballistic hits and a manually opened door. It completed no mission or stage and is not an hour-long or complete-campaign validation. One death and one retry occurred.",
+  "separatePerformanceEvidence": "validation/deadcircuit-3d-performance.json"
 }

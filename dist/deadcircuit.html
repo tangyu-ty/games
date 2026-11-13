@@ -3512,6 +3512,7 @@
     resume() {
       if (this.resumeMode === "dialogue") {
         this.mode = "dialogue";
+        this.input?.clear();
         this.renderDialogue();
       } else {
         this.setMode("playing");
@@ -3526,6 +3527,7 @@
         const previous = this.backMode || "menu";
         if (previous === "dialogue") {
           this.mode = previous;
+          this.input?.clear();
           this.renderDialogue();
         } else this.setMode(previous);
       } else if (this.mode === "briefing") this.showMenu();
@@ -4731,6 +4733,7 @@
       } else if (phase === "complete") this.setMode("missionComplete");
       else if (["intro", "opening", "interlude", "choice", "reply", "closing", "letter", "ending", "fieldnote"].includes(phase)) {
         this.mode = "dialogue";
+        this.input?.clear();
         this.renderDialogue();
       } else if (phase === "dead") this.setMode("dead");
       else if (restored) {
@@ -4769,6 +4772,66 @@
   var finite2 = (n, fallback = 0) => Number.isFinite(n) ? n : fallback;
   var wrap = (n) => Math.atan2(Math.sin(n), Math.cos(n));
   var editTarget = (element) => !!element?.matches?.('input,select,textarea,[contenteditable="true"]');
+  function aimSegmentBlocked(from, to, renderer) {
+    const scale = renderer.unitScale || 0.02;
+    for (const collider of renderer.colliders || []) {
+      const def = collider.def;
+      if (def && (def.active === false || def.destroyed || Number.isFinite(def.hp) && def.hp <= 0 || collider.kind === "door" && def.open)) continue;
+      if (!def && collider.collidable === false) continue;
+      const bounds = collider.bounds;
+      const box = def ? { minX: def.x, maxX: def.x + def.w, minY: def.y, maxY: def.y + def.h, minH: 0, maxH: collider.height || (collider.kind === "cover" ? def.low === false ? 2.3 : 1.05 : 3.2) } : bounds ? { minX: bounds.min.x / scale, maxX: bounds.max.x / scale, minY: bounds.min.z / scale, maxY: bounds.max.z / scale, minH: bounds.min.y, maxH: bounds.max.y } : null;
+      if (!box) continue;
+      let near = 0, far = 1, intersects = true;
+      for (const [key, min, max] of [["x", box.minX, box.maxX], ["y", box.minY, box.maxY], ["height", box.minH, box.maxH]]) {
+        const start = from[key], delta = to[key] - start;
+        if (Math.abs(delta) < 1e-10) {
+          if (start < min || start > max) {
+            intersects = false;
+            break;
+          }
+          continue;
+        }
+        let a = (min - start) / delta, b = (max - start) / delta;
+        if (a > b) [a, b] = [b, a];
+        near = Math.max(near, a);
+        far = Math.min(far, b);
+        if (near > far) {
+          intersects = false;
+          break;
+        }
+      }
+      if (intersects && near < 0.9999 && far > 1e-4) return true;
+    }
+    return false;
+  }
+  function controllerLookAssist(g, yaw, pitch, stickX, stickY) {
+    const unchanged = { yaw, pitch, friction: 1, targetId: null }, input = g?.input, renderer = g?.renderer, p = g?.player;
+    if (!p || g.mode !== "playing" || g.settings?.aimAssist !== true || input?.lastDevice !== "gamepad" || !renderer?.is3D || typeof renderer.projectPoint !== "function" || Math.hypot(stickX, stickY) < 0.03) return unchanged;
+    const look = input.lookDelta || {};
+    if (Math.abs(look.mouseX || 0) + Math.abs(look.mouseY || 0) + Math.abs(look.touchX || 0) + Math.abs(look.touchY || 0) > 0 || input.touchAim) return unchanged;
+    renderer.updateCamera?.(g);
+    const camera = renderer.cameraData || g.camera3D;
+    if (!camera || ![camera.x, camera.y, camera.height].every(Number.isFinite)) return unchanged;
+    const range = Math.min(1600, g.weaponStats?.()?.range || 1100), aspect = (renderer.width || camera.viewportWidth || 1e3) / (renderer.height || camera.viewportHeight || 700), tan = Math.tan((camera.fov || 64) * Math.PI / 360), cone = 0.085;
+    let selected = null;
+    for (const enemy3 of g.enemies || []) {
+      if (enemy3.dead || enemy3.disabled || enemy3.hp <= 0 || enemy3.friendly || Math.hypot(enemy3.x - p.x, enemy3.y - p.y) > range) continue;
+      const model = renderer.actorMap?.get(enemy3.id);
+      if (!model || model.friendly || model.group?.visible === false) continue;
+      if (typeof g.hasSight !== "function" || !g.hasSight(p, enemy3)) continue;
+      const metrics = model.metrics || { base: 0, height: 1.75 }, height = (metrics.base || 0) + (metrics.height || 1.75) * 0.55;
+      const projected = renderer.projectPoint(enemy3, height);
+      if (!projected?.visible || !projected.inFront || ![projected.ndcX, projected.ndcY].every(Number.isFinite)) continue;
+      const errorX = Math.atan(projected.ndcX * tan * aspect), errorY = Math.atan(projected.ndcY * tan), error = Math.hypot(errorX, errorY);
+      if (error >= cone || errorX * yaw + errorY * pitch < -1e-7) continue;
+      if (aimSegmentBlocked(camera, { x: enemy3.x, y: enemy3.y, height }, renderer)) continue;
+      const score = error + Math.hypot(enemy3.x - p.x, enemy3.y - p.y) * 2e-6;
+      if (!selected || score < selected.score) selected = { id: enemy3.id, error, score };
+    }
+    if (!selected) return unchanged;
+    const friction = 1 - 0.28 * (1 - selected.error / cone);
+    return { yaw: yaw * friction, pitch: pitch * friction, friction, targetId: selected.id };
+  }
   var Input3D = class {
     constructor(game2, canvas2) {
       this.g = game2;
@@ -5231,10 +5294,12 @@
       const aim = this.mouse.aim || this.padDown(6) || this.touchActions.has("aim"), factor = aim ? 0.55 : 1;
       const mouseSensitivity = clamp3(finite2(g.settings?.mouseSensitivity, 26e-4), 5e-4, 0.012), touchSensitivity = clamp3(finite2(g.settings?.touchSensitivity, 52e-4), 1e-3, 0.02);
       const padSensitivity = clamp3(finite2(g.settings?.lookSensitivity, 1), 0.25, 3), invert = g.settings?.invertY ? -1 : 1;
-      const yawDelta = this.lookDelta.mouseX * mouseSensitivity + this.lookDelta.touchX * touchSensitivity + this.axis(2) * 2.4 * padSensitivity * dt;
-      const pitchDelta = -(this.lookDelta.mouseY * mouseSensitivity + this.lookDelta.touchY * touchSensitivity + this.axis(3) * 1.65 * padSensitivity * dt) * invert;
-      p.angle = wrap(finite2(p.angle) + yawDelta * factor);
-      p.pitch = clamp3(finite2(p.pitch) + pitchDelta * factor, -1.08, 1.08);
+      const rx2 = this.axis(2), ry2 = this.axis(3), assist = controllerLookAssist(g, rx2 * 2.4 * padSensitivity * dt * factor, -ry2 * 1.65 * padSensitivity * dt * invert * factor, rx2, ry2);
+      this.aimAssistTargetId = assist.targetId;
+      const yawDelta = (this.lookDelta.mouseX * mouseSensitivity + this.lookDelta.touchX * touchSensitivity) * factor + assist.yaw;
+      const pitchDelta = -(this.lookDelta.mouseY * mouseSensitivity + this.lookDelta.touchY * touchSensitivity) * invert * factor + assist.pitch;
+      p.angle = wrap(finite2(p.angle) + yawDelta);
+      p.pitch = clamp3(finite2(p.pitch) + pitchDelta, -1.08, 1.08);
       this.lookDelta = { mouseX: 0, mouseY: 0, touchX: 0, touchY: 0 };
       let side = (this.down("KeyD", "ArrowRight") ? 1 : 0) - (this.down("KeyA", "ArrowLeft") ? 1 : 0) + this.axis(0) + this.touchMove.x;
       let forward = (this.down("KeyW", "ArrowUp") ? 1 : 0) - (this.down("KeyS", "ArrowDown") ? 1 : 0) - this.axis(1) - this.touchMove.y;
@@ -5390,11 +5455,13 @@
     back() {
       const mode = this.returnMode || "menu";
       this.g.mode = mode;
+      this.g.input?.clear();
       this.render(mode);
     }
     open(mode) {
       this.returnMode = this.g.mode;
       this.g.mode = mode;
+      this.g.input?.clear();
       this.render(mode);
     }
     render(mode = this.g.mode) {
@@ -5516,7 +5583,7 @@
       const slots = Object.keys(SLOTS), candidate = ATTACHMENTS.filter((a) => a.slot === currentSlot && compatible(id2, a.id)), getCount = (a) => Number(p.ownedAttachments?.[a.id]) || 0;
       this.mount(`<section class="screen screen-scroll"><header class="section-head"><div><div class="eyebrow">MODULAR ARMORY / \u9676\u5937\u7684\u5DE5\u4F5C\u53F0</div><h2>\u8BA9\u88C5\u5907\u9002\u5408\u4F60\u7684\u8DEF\u7EBF\u3002</h2><p>\u62C6\u4E0B\u7684\u914D\u4EF6\u8FD4\u56DE\u5E93\u5B58\uFF1B\u66FF\u6362\u914D\u4EF6\u4E0D\u4F1A\u9500\u6BC1\u65E7\u4EF6\u3002\u6574\u5907\u65F6\u884C\u52A8\u6682\u505C\u3002</p></div><div class="head-actions">${button("armoryGuide", "\u67E5\u770B\u6218\u672F\u624B\u518C", "quiet")}${button("armoryBack", "\u5B8C\u6210\u6574\u5907 \u2192", "secondary")}</div></header>
    <div class="armory-layout"><aside class="armory-list" aria-label="\u6B66\u5668\u5217\u8868">${WEAPONS.map((w, i) => `<button class="weapon-option ${w.id === id2 ? "selected" : ""}" data-weapon="${w.id}" aria-pressed="${w.id === id2}" style="${!owned.includes(w.id) ? "opacity:.48" : ""}"><span>${String(i + 1).padStart(2, "0")}</span><div><strong>${esc(w.name)}</strong><small>${esc(w.family)} \xB7 ${esc(w.caliber)}</small></div>${loadout.includes(w.id) ? `<small class="equip-mark">${loadout[0] === w.id ? "PRIMARY" : "SECONDARY"}</small>` : !owned.includes(w.id) ? '<small class="equip-mark">LOCKED</small>' : ""}</button>`).join("")}</aside>
-    <article class="armory-center"><div style="display:flex;justify-content:space-between;gap:10px"><span class="micro">${esc(def.family)} / ${esc(def.caliber)}</span><span class="tag ${hasWeapon ? "" : "dim"}">${hasWeapon ? "\u53EF\u6574\u5907" : `\u7B2C ${Number(def.unlockedAt || 0) + 1} \u5173\u89E3\u9501`}</span></div><div class="weapon-visual">${weaponSVG(id2, 400)}</div><h3 class="weapon-name">${esc(def.name)}</h3><p class="weapon-description">${esc(def.description)}</p><div class="weapon-stats">${this.stat("\u5355\u53D1\u4F24\u5BB3", number(stats.damage), stats.damage / 130)}${this.stat("\u5C04\u901F / \u5206", number(stats.rpm), stats.rpm / 1100)}${this.stat("\u5F39\u5323\u5BB9\u91CF", number(stats.mag), stats.mag / 100)}${this.stat("\u6362\u5F39 / \u79D2", number(stats.reload, 2), 1 - stats.reload / 6)}${this.stat("\u6709\u6548\u5C04\u7A0B", number(stats.range), stats.range / 1600)}${this.stat("\u6563\u5E03 / \u5EA6", number((stats.spread || 0) * 180 / Math.PI, 1), 1 - (stats.spread || 0) / 0.25)}</div><div class="weapon-equip-actions">${button("equipPrimary", loadout[0] === id2 ? "\u5DF2\u643A\u884C \xB7 \u4E3B\u6B66\u5668" : "\u8BBE\u4E3A\u4E3B\u6B66\u5668", "secondary", !hasWeapon || loadout[0] === id2 ? "disabled" : "")}${button("equipSecondary", loadout[1] === id2 ? "\u5DF2\u643A\u884C \xB7 \u526F\u6B66\u5668" : "\u8BBE\u4E3A\u526F\u6B66\u5668", "secondary", !hasWeapon || loadout[1] === id2 ? "disabled" : "")}</div></article>
+    <article class="armory-center"><div style="display:flex;justify-content:space-between;gap:10px"><span class="micro">${esc(def.family)} / ${esc(def.caliber)}</span><span class="tag ${hasWeapon ? "" : "dim"}">${hasWeapon ? "\u53EF\u6574\u5907" : `\u7B2C ${Number(def.unlockedAt || 0) + 1} \u5173\u89E3\u9501`}</span></div><div class="weapon-visual">${weaponSVG(id2, 400)}</div><h3 class="weapon-name">${esc(def.name)}</h3><p class="weapon-description">${esc(def.description)}</p><div class="weapon-stats">${this.stat("\u5355\u53D1\u4F24\u5BB3", number(stats.damage), stats.damage / 130)}${this.stat("\u5C04\u901F / \u5206", number(stats.rpm), stats.rpm / 1100)}${this.stat("\u5F39\u5323\u5BB9\u91CF", number(stats.mag), stats.mag / 100)}${this.stat("\u6362\u5F39 / \u79D2", number(stats.reload, 2), 1 - stats.reload / 6)}${this.stat("\u6709\u6548\u5C04\u7A0B / \u7C73", number(stats.range * 0.02, 1), stats.range / 1600)}${this.stat("\u6563\u5E03 / \u5EA6", number((stats.spread || 0) * 180 / Math.PI, 1), 1 - (stats.spread || 0) / 0.25)}</div><div class="weapon-equip-actions">${button("equipPrimary", loadout[0] === id2 ? "\u5DF2\u643A\u884C \xB7 \u4E3B\u6B66\u5668" : "\u8BBE\u4E3A\u4E3B\u6B66\u5668", "secondary", !hasWeapon || loadout[0] === id2 ? "disabled" : "")}${button("equipSecondary", loadout[1] === id2 ? "\u5DF2\u643A\u884C \xB7 \u526F\u6B66\u5668" : "\u8BBE\u4E3A\u526F\u6B66\u5668", "secondary", !hasWeapon || loadout[1] === id2 ? "disabled" : "")}</div></article>
     <aside class="attachment-panel"><h3 class="panel-title">\u914D\u4EF6\u68C0\u89C6 <span class="muted small">/ 6 \u4E2A\u63D2\u69FD</span></h3><div class="attachment-slots">${slots.map((slot) => {
         const a = attachment2(fittings[slot]);
         return `<button class="attachment-slot ${slot === currentSlot ? "selected" : ""} ${a ? "" : "empty"}" data-slot="${slot}" aria-pressed="${slot === currentSlot}"><span>${SLOTS[slot]}</span><strong>${esc(a?.name || "\u672A\u5B89\u88C5")}</strong></button>`;
@@ -20104,6 +20171,8 @@ void main() {
       this.objectMap = /* @__PURE__ */ new Map();
       this.zoneMap = /* @__PURE__ */ new Map();
       this.effectMap = /* @__PURE__ */ new Map();
+      this.lootVisuals = /* @__PURE__ */ new Map();
+      this.grenadeVisual = null;
       this.solidAim = [];
       this.batches = /* @__PURE__ */ new Map();
       this.raycaster = new Uh();
@@ -20309,6 +20378,8 @@ void main() {
       this.sun.target.updateMatrixWorld(true);
     }
     clearLevel() {
+      for (const mesh of this.lootVisuals.values()) mesh.count = 0;
+      if (this.grenadeVisual) this.grenadeVisual.count = 0;
       for (const batch of this.actorBatches.values()) batch.mesh.dispose();
       this.actorBatches.clear();
       this.actorRenderGroup.clear();
@@ -21173,6 +21244,65 @@ void main() {
       }
       return state.visible;
     }
+    syncLoot(g) {
+      const counts = /* @__PURE__ */ new Map();
+      for (const pickup of g.pickups || []) {
+        const type = pickup.type === "armor" ? "armor" : pickup.type === "health" || pickup.type === "medkit" ? "health" : "ammo";
+        let mesh = this.lootVisuals.get(type);
+        if (!mesh) {
+          const color = type === "armor" ? "#9bcadd" : type === "health" ? "#acdcae" : "#e6ce91";
+          mesh = new io(this.geometries.box, this.material(color, { emissive: color, emissiveIntensity: 0.38 }), 256);
+          mesh.instanceMatrix.setUsage(mm);
+          mesh.frustumCulled = false;
+          mesh.name = "supply-" + type;
+          mesh.count = 0;
+          this.scene.add(mesh);
+          this.lootVisuals.set(type, mesh);
+        }
+        const index = counts.get(type) || 0;
+        if (index >= 256) continue;
+        const dims = type === "armor" ? v(0.27, 0.09, 0.22) : type === "health" ? v(0.2, 0.17, 0.19) : v(0.24, 0.14, 0.17), height = 0.13 + Math.sin(this.time * 2 + pickup.x) * 0.025;
+        this.tmpQuat.setFromAxisAngle(v(0, 1, 0), this.time * 0.35);
+        this.tmpMatrix.compose(v(pickup.x * S, height, pickup.y * S), this.tmpQuat, dims);
+        mesh.setMatrixAt(index, this.tmpMatrix);
+        counts.set(type, index + 1);
+      }
+      for (const [type, mesh] of this.lootVisuals) {
+        mesh.count = counts.get(type) || 0;
+        mesh.visible = mesh.count > 0;
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.updateMatrixWorld(true);
+      }
+      const thrown = g.throwables || [];
+      if (thrown.length && !this.grenadeVisual) {
+        const mesh = new io(this.geometries.cylinder, this.material("#ffffff", { emissive: "#788a6d", emissiveIntensity: 0.35 }), 32);
+        mesh.instanceMatrix.setUsage(mm);
+        mesh.frustumCulled = false;
+        mesh.name = "flying-grenades";
+        mesh.count = 0;
+        this.scene.add(mesh);
+        this.grenadeVisual = mesh;
+      }
+      if (this.grenadeVisual) {
+        const mesh = this.grenadeVisual;
+        let count2 = 0;
+        const color = new _t();
+        for (const grenade of thrown) {
+          if (count2 >= 32) break;
+          const progress = clamp5(1 - grenade.life / (grenade.maxLife || 1.05), 0, 1), height = 1.1 * (1 - progress) + Math.sin(progress * Math.PI) * 1.4 + 0.08;
+          this.tmpQuat.setFromEuler(new tn(progress * 7, progress * 5, progress * 9));
+          this.tmpMatrix.compose(v(grenade.x * S, height, grenade.y * S), this.tmpQuat, v(0.075, 0.16, 0.075));
+          mesh.setMatrixAt(count2, this.tmpMatrix);
+          color.set(grenade.type === "smoke" ? "#a4cfc3" : grenade.type === "flash" ? "#dce3cd" : "#e2b778");
+          mesh.setColorAt(count2++, color);
+        }
+        mesh.count = count2;
+        mesh.visible = count2 > 0;
+        mesh.instanceMatrix.needsUpdate = true;
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+        mesh.updateMatrixWorld(true);
+      }
+    }
     syncFX(g) {
       const present = /* @__PURE__ */ new Set();
       for (const e of g.effects || []) {
@@ -21297,6 +21427,7 @@ void main() {
       this.prepareAim(g);
       this.updateLighting(g);
       this.syncFX(g);
+      this.syncLoot(g);
       this.renderActorInstances();
       this.webgl.render(this.scene, this.camera);
       this.drawHud(g);
@@ -21461,6 +21592,8 @@ void main() {
       window.removeEventListener("resize", this.boundResize);
       this.hud.remove();
       this.clearLevel();
+      for (const mesh of this.lootVisuals.values()) mesh.dispose();
+      if (this.grenadeVisual) this.grenadeVisual.dispose();
       for (const m of this.materials.values()) m.dispose();
       for (const t of this.textures.values()) t.dispose();
       for (const g of Object.values(this.geometries)) g.dispose();
