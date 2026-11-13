@@ -19,3 +19,17 @@ test('armory renders derived effective range in metres while keeping the world-u
   assert.equal(JSON.stringify(WEAPONS),catalog,'Rendering cannot rewrite weapon definitions');
  }finally{if(originalFrame===undefined)delete globalThis.requestAnimationFrame;else globalThis.requestAnimationFrame=originalFrame;}
 });
+
+test('deferred modal autofocus preserves a newly selected control and ignores callbacks from an older modal',()=>{
+ const previousDocument=globalThis.document,previousFrame=globalThis.requestAnimationFrame,frames=[],focuses=[];
+ const body={classList:{toggle(){}}},hud={},overlay={members:new Set(),className:'',contains(element){return this.members.has(element);},querySelector(selector){if(selector==='[data-autofocus]'||selector==='.primary:not([disabled])'||selector==='button:not([disabled])')return this.primary;return null;}};
+ const document={body,activeElement:body,getElementById:id=>id==='hud'?hud:null};
+ const element=id=>({id,disabled:false,getClientRects:()=>[{}],focus(){document.activeElement=this;focuses.push(id);}});
+ Object.defineProperty(overlay,'innerHTML',{set(){document.activeElement=body;this.members=new Set([this.primary,this.select]);}});
+ globalThis.document=document;globalThis.requestAnimationFrame=callback=>{frames.push(callback);return frames.length;};
+ const ui={g:{settings:{},renderer:{}},overlay};
+ try{
+  overlay.primary=element('settingsBack');overlay.select=element('deadzoneSetting');UI.prototype.mount.call(ui,'settings','settings');overlay.select.focus();frames.shift()();assert.equal(document.activeElement.id,'deadzoneSetting','A user/controller-selected select keeps focus when delayed autofocus finally runs');
+  const count=focuses.length;overlay.primary=element('oldConfirm');UI.prototype.mount.call(ui,'first','menu');overlay.primary=element('dialogueNext');UI.prototype.mount.call(ui,'second','dialogue');frames.shift()();assert.equal(document.activeElement,body,'An old modal callback cannot focus controls in the new modal');assert.equal(focuses.length,count);frames.shift()();assert.equal(document.activeElement.id,'dialogueNext','Without a newer user selection, the normal confirm action still receives focus');
+ }finally{if(previousDocument===undefined)delete globalThis.document;else globalThis.document=previousDocument;if(previousFrame===undefined)delete globalThis.requestAnimationFrame;else globalThis.requestAnimationFrame=previousFrame;}
+});

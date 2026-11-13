@@ -24,6 +24,7 @@ export class UI{
   $('captureMouseBtn')?.addEventListener('click',()=>{game.audio?.unlock();game.input?.captureMouse?.();});
  }
  mount(html,mode,focus=true){
+  const generation=(this.mountGeneration||0)+1;this.mountGeneration=generation;
   const repeated=this.lastMountedMode===mode;this.lastMountedMode=mode;
   const active=document.activeElement,focusKey=active?.id?`#${active.id}`:['setting','journal','slot','attachment','weapon'].find(key=>active?.dataset?.[key]);
   const previousFocus=active?.id?focusKey:focusKey?`[data-${focusKey}="${active.dataset[focusKey]}"]`:null;
@@ -34,7 +35,7 @@ export class UI{
   document.body.classList.toggle('reduced',!!this.g.settings?.reduced);
   document.body.classList.toggle('large-text',!!this.g.settings?.largeText);
   document.body.classList.toggle('third-person-view',!!this.g.renderer?.is3D);
-  if(focus)requestAnimationFrame(()=>{const retained=repeated&&previousFocus?this.overlay.querySelector(previousFocus):null,el=retained||this.overlay.querySelector('[data-autofocus]')||this.overlay.querySelector('.primary:not([disabled])')||this.overlay.querySelector('button:not([disabled])');el?.focus({preventScroll:true});});
+  if(focus)requestAnimationFrame(()=>{if(this.mountGeneration!==generation)return;const current=document.activeElement;if(current&&this.overlay.contains(current)&&!current.disabled&&current.getClientRects().length)return;const retained=repeated&&previousFocus?this.overlay.querySelector(previousFocus):null,el=retained||this.overlay.querySelector('[data-autofocus]')||this.overlay.querySelector('.primary:not([disabled])')||this.overlay.querySelector('button:not([disabled])');el?.focus({preventScroll:true});});
  }
  on(id,fn){const el=$(id);if(el)el.onclick=event=>{this.g.audio?.unlock();fn();if(event.pointerType!=='touch')this.captureForPlay();};}
  captureForPlay(){const g=this.g,device=g.input?.lastDevice;if(g.mode==='playing'&&g.renderer?.is3D&&!['touch','gamepad'].includes(device)&&!(matchMedia('(pointer:coarse)').matches&&device!=='mouse'))g.input?.captureMouse?.();}
@@ -52,19 +53,19 @@ export class UI{
   }
  }
  menu(){
-  const g=this.g,hasSave=typeof g.hasSave==='function'?g.hasSave():!!g.hasSave,completed=g.campaign?.completed?.length||0;
+  const g=this.g,hasSave=typeof g.hasSave==='function'?g.hasSave():!!g.hasSave,completed=(g.menuCampaign||g.campaign)?.completed?.length||0,difficulty=g.menuDifficulty||g.settings?.difficulty||'standard';
   this.mount(`<section class="screen menu-screen">
    <div><div class="brand-line"><div class="brand-square"></div><span>WHITE FALCON CITY<br>TACTICAL INCIDENT / 09</span></div><h1 class="menu-title">DEAD<span>CIRCUIT</span></h1><h2 class="menu-cn">断线协议</h2><p class="menu-description">当一座城市被重新划分敌我，<br>你要决定，枪口还该听谁的命令。<br>穿过封锁线，拆开谎言，把人带回家。</p>
     <div class="menu-buttons">${hasSave?button('continueBtn',`继续行动 <span>${completed}/18 →</span>`,'primary','data-autofocus'):''}${button('newGameBtn',`开始新战役 <span>→</span>`,hasSave?'secondary':'primary',hasSave?'':'data-autofocus')}${button('practiceBtn','战术训练场 <span>↗</span>','secondary')}</div>
-    <div class="difficulty-picker"><span>行动难度</span><select id="menuDifficulty" aria-label="选择游戏难度">${Object.entries(DIFFICULTIES).map(([id,name])=>`<option value="${id}" ${g.settings?.difficulty===id?'selected':''}>${name}</option>`).join('')}</select></div>
+    <div class="difficulty-picker"><span>行动难度</span><select id="menuDifficulty" aria-label="选择游戏难度">${Object.entries(DIFFICULTIES).map(([id,name])=>`<option value="${id}" ${difficulty===id?'selected':''}>${name}</option>`).join('')}</select></div>
     <div class="menu-secondary">${button('guideBtn','战术手册','quiet')}${button('settingsBtn','设置','quiet')}${hasSave?button('menuJournalBtn','行动档案','quiet'):''}</div><p class="build-note">3D 越肩第三人称 / 18 处独立战场 / 模块化军械<br>键鼠 · 标准手柄 · 触屏　/　本地自动存档</p></div>
    <aside class="menu-intel"><div class="intel-top"><span>城市观测 / WFC—04</span><span class="live">● SIGNAL UNSTABLE</span></div><div class="city-art" aria-hidden="true">${[[2,15,35],[12,14,56],[25,13,73],[38,17,45],[53,12,88],[67,16,64],[80,15,44],[94,10,67]].map(([x,w,h])=>`<i class="city-building" style="--x:${x}%;--w:${w}%;--h:${h}%"></i>`).join('')}<i class="crosshair"></i><div class="city-caption">白隼城 / 05:42 AM<br>RECOGNITION NETWORK: COMPROMISED</div></div><div class="intel-bottom"><div class="eyebrow">一夜之后，整座城成为敌区</div><h2>选择路线，也选择代价。</h2><p>在安保的交叉火力、感染者的追猎与无人机的扫描之间穿行。关闭电路、打开侧门、改变掩体；每一次开火，都会让别的东西听见。</p><div class="faction-row"><div><i></i><strong>集团安保</strong><small>协同 · 压制 · 包抄</small></div><div><i></i><strong>失控感染者</strong><small>声源 · 追猎 · 围困</small></div><div><i></i><strong>无人武装</strong><small>扫描 · 预警 · 弱点</small></div></div></div></aside>
   </section>`,'menu');
-  this.on('continueBtn',()=>g.continueGame());this.on('newGameBtn',()=>hasSave?this.confirmNew():g.startNew(g.settings?.difficulty||'standard'));this.on('practiceBtn',()=>g.startPractice());this.on('guideBtn',()=>this.open('guide'));this.on('settingsBtn',()=>this.open('settings'));this.on('menuJournalBtn',()=>g.showJournal());$('menuDifficulty').onchange=e=>g.setDifficulty(e.target.value);
+  this.on('continueBtn',()=>g.continueGame());this.on('newGameBtn',()=>hasSave?this.confirmNew():g.startNew(g.menuDifficulty||g.settings?.difficulty||'standard'));this.on('practiceBtn',()=>g.startPractice());this.on('guideBtn',()=>this.open('guide'));this.on('settingsBtn',()=>this.open('settings'));this.on('menuJournalBtn',()=>g.showJournal());$('menuDifficulty').onchange=e=>g.setDifficulty(e.target.value);
  }
  confirmNew(){
   this.mount(`<section class="screen screen-narrow panel confirm-box"><div class="eyebrow">REPLACE OPERATION / 新的行动档案</div><h2>开始新的战役？</h2><p>当前战役的任务检查点、角色选择和军械进度将被新档案替换。你也可以回到主菜单继续原来的行动。</p><div class="actions">${button('cancelNew','保留当前进度','secondary','data-autofocus')}${button('confirmNew','替换档案并开始','danger')}</div></section>`,'menu');
-  this.on('cancelNew',()=>this.menu());this.on('confirmNew',()=>this.g.startNew(this.g.settings?.difficulty||'standard'));
+  this.on('cancelNew',()=>this.menu());this.on('confirmNew',()=>this.g.startNew(this.g.menuDifficulty||this.g.settings?.difficulty||'standard'));
  }
  briefing(){
   const g=this.g,id=clamp(g.campaign?.mission,0,17),meta=LEVELS[id]||{},chapter=CAMPAIGN[id]||{},done=g.campaign?.completed||[],profile=g.profile||{},loadout=profile.loadout||[];
@@ -117,8 +118,8 @@ export class UI{
   this.on('pauseResume',()=>g.resume());this.on('pauseLoadout',()=>g.showLoadout());this.on('pauseJournal',()=>g.showJournal());this.on('pauseGuide',()=>this.open('guide'));this.on('pauseSettings',()=>this.open('settings'));this.on('pausePort',()=>{g.save();g.showMenu();});
  }
  journal(){
-  const g=this.g,c=g.campaign||{},completed=c.completed||[],available=CAMPAIGN.filter((_,i)=>completed.includes(i)||i===c.mission),id=available.some(m=>m.id===this.journalMission)?this.journalMission:clamp(c.mission,0,17);this.journalMission=id;
-  const chapter=CAMPAIGN[id]||{},choice=c.choices?.[id],selectedOption=chapter.choice?.options?.[typeof choice==='object'?choice.index:choice],full=completed.includes(id),lines=[...(id===0?INTRO||[]:[]),...(chapter.opening||[]),...(chapter.interlude||[]),...(selectedOption?.reply||[]),...(chapter.closing||[]),...(id===17&&completed.length===18&&c.phase==='won'?(ENDINGS[this.g.endingKey]||[]):[])],journal=Array.isArray(c.journal)?c.journal:[];
+  const g=this.g,c=g.journalCampaign||g.campaign||{},completed=c.completed||[],available=CAMPAIGN.filter((_,i)=>completed.includes(i)||i===c.mission),id=available.some(m=>m.id===this.journalMission)?this.journalMission:clamp(c.mission,0,17);this.journalMission=id;
+  const chapter=CAMPAIGN[id]||{},choice=c.choices?.[id],selectedOption=chapter.choice?.options?.[typeof choice==='object'?choice.index:choice],full=completed.includes(id),lines=[...(id===0?INTRO||[]:[]),...(chapter.opening||[]),...(chapter.interlude||[]),...(selectedOption?.reply||[]),...(chapter.closing||[]),...(id===17&&completed.length===18&&c.phase==='won'?(ENDINGS[g.determineEnding?.(c)||this.g.endingKey]||[]):[])],journal=Array.isArray(c.journal)?c.journal:[];
   const allNotes=Array.isArray(c.fieldNotes)?c.fieldNotes:[],notes=allNotes.filter(note=>note&&note.mission===id&&typeof note.text==='string'),noteTexts=new Set(allNotes.map(note=>note?.text));
   const isNoteLine=line=>String(line?.id||'').includes('fieldnote')||line?.phase==='fieldnote'||line?.type==='fieldnote'||noteTexts.has(line?.text);
   const visibleLines=full?lines:journal.filter(line=>typeof line==='object'&&line.mission===id&&!String(line.id||'').startsWith('radio:')&&!isNoteLine(line));
@@ -134,7 +135,7 @@ export class UI{
   this.on('journalBack',()=>g.back());this.on('journalStoryTab',()=>{this.journalTab='story';this.journal();});this.on('journalRadioTab',()=>{this.journalTab='radio';this.journal();});this.on('journalNotesTab',()=>{this.journalTab='notes';this.journal();});this.overlay.querySelectorAll('[data-journal]').forEach(el=>el.onclick=()=>{this.journalMission=Number(el.dataset.journal);this.journal();});
  }
  settings(){
-  const g=this.g,s={minimap:true,aimAssist:true,...(g.settings||{}),reduced:g.settings?.reduced??g.settings?.reducedMotion??false};
+  const g=this.g,s={minimap:true,aimAssist:true,...(g.settings||{}),reduced:g.settings?.reduced??g.settings?.reducedMotion??false,difficulty:this.returnMode==='menu'?(g.menuDifficulty||g.settings?.difficulty):g.settings?.difficulty};
   const toggle=(key,title,description)=>`<div class="settings-row"><div><strong>${title}</strong><small>${description}</small></div><button class="toggle ${s[key]?'':'off'}" data-setting="${key}" aria-pressed="${!!s[key]}">${s[key]?'开启':'关闭'}</button></div>`;
   const sensitivity=(key,id,title,description,values,fallback)=>{const current=Number.isFinite(s[key])?s[key]:fallback,custom=!values.some(v=>Math.abs(v-current)<1e-7);return `<div class="settings-row"><div><strong>${title}</strong><small>${description}</small></div><select id="${id}" aria-label="${title}">${values.map((value,i)=>`<option value="${value}" ${Math.abs(current-value)<1e-7?'selected':''}>${['低','标准','高','很高'][i]}</option>`).join('')}${custom?`<option value="${current}" selected>自定义</option>`:''}</select></div>`;};
   this.mount(`<section class="screen screen-narrow screen-scroll"><header class="section-head"><div><div class="eyebrow">PERSONAL CONFIGURATION / 个人设置</div><h2>按自己的节奏行动。</h2></div></header><div class="panel"><div class="settings-row"><div><strong>行动难度</strong><small>随时调整，保留战役进度。</small></div><select id="settingsDifficulty" aria-label="行动难度">${Object.entries(DIFFICULTIES).map(([id,title])=>`<option value="${id}" ${s.difficulty===id?'selected':''}>${title}</option>`).join('')}</select></div>${sensitivity('mouseSensitivity','settingsMouseSensitivity','鼠标镜头灵敏度','调整移动鼠标时转动越肩镜头的速度。',[.0017,.0026,.0036,.0047],.0026)}${sensitivity('lookSensitivity','settingsLookSensitivity','手柄镜头灵敏度','调整右摇杆的镜头转动速度。',[.65,1,1.4,1.8],1)}${sensitivity('touchSensitivity','settingsTouchSensitivity','触屏镜头灵敏度','调整右侧滑动时的镜头转动速度。',[.0034,.0052,.0073,.0094],.0052)}${toggle('invertY','反转垂直视角','同时作用于鼠标、摇杆与触屏的上下视角。')}${toggle('mute','静音','关闭音乐与音效。首次交互后浏览器才会允许播放声音。')}${toggle('reduced','减少动态效果','减少震动、屏幕闪光和界面动画。')}${toggle('largeText','放大剧情字幕','提高对话与回信的文字大小。')}${toggle('minimap','战术小地图','桌面端显示目标位置与区域布局。')}${toggle('aimAssist','手柄辅助瞄准','帮助稳定接近可见目标的瞄准。')}<div class="settings-row"><div><strong>手柄摇杆死区</strong><small>摇杆漂移时提高；小幅操作不灵敏时降低。</small></div><select id="deadzoneSetting" aria-label="摇杆死区">${[.12,.18,.24,.3].map(v=>`<option value="${v}" ${Math.abs((s.deadzone??.18)-v)<.01?'selected':''}>${Math.round(v*100)}%</option>`).join('')}</select></div><div class="actions">${button('settingsBack','保存设置并返回 →','primary','data-autofocus')}</div><p class="small muted" style="line-height:1.8">设置与游戏进度仅保存在当前浏览器。没有账号、在线排行榜或远端存档。</p></div></section>`,'settings');

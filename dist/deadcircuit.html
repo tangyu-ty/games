@@ -3371,11 +3371,13 @@
         if (s36 && typeof s36 === "object") {
           for (const k of ["mute", "reducedMotion", "screenShake", "aimAssist", "subtitles", "largeText", "minimap", "reduced", "invertY"]) if (typeof s36[k] === "boolean") this.settings[k] = s36[k];
           if (["story", "standard", "tactical"].includes(s36.difficulty)) this.settings.difficulty = s36.difficulty;
+          if (["story", "standard", "tactical"].includes(s36.preferredDifficulty)) this.settings.preferredDifficulty = s36.preferredDifficulty;
           if (Number.isFinite(s36.deadzone)) this.settings.deadzone = clamp(s36.deadzone, 0.08, 0.4);
           for (const [key, min, max] of [["mouseSensitivity", 5e-4, 0.012], ["touchSensitivity", 1e-3, 0.02], ["lookSensitivity", 0.25, 3]]) if (Number.isFinite(s36[key])) this.settings[key] = clamp(s36[key], min, max);
         }
       } catch {
       }
+      this.campaignLoaded = false;
       this.audio.setMuted(this.settings.mute);
       this.loadAvailable = this.readSave() != null;
     }
@@ -3409,6 +3411,17 @@
     get hasSave() {
       return this.loadAvailable;
     }
+    get menuCampaign() {
+      if (this.campaignLoaded) return this.campaign;
+      const saved = this.readSave();
+      return saved ? this.normalizeCampaign(saved.campaign) : this.campaign;
+    }
+    get menuDifficulty() {
+      if (this.settings.preferredDifficulty) return this.settings.preferredDifficulty;
+      if (this.campaignLoaded) return this.campaign.difficulty || this.settings.difficulty;
+      const saved = this.readSave();
+      return saved ? this.normalizeCampaign(saved.campaign).difficulty : this.settings.difficulty;
+    }
     get friendlies() {
       return (this.level?.objects || []).filter((o) => o.following && !o.delivered && o.hp > 0);
     }
@@ -3435,6 +3448,8 @@
       this.ui?.render(mode);
     }
     startNew(difficulty = this.settings.difficulty) {
+      this.campaignLoaded = true;
+      this.journalCampaign = null;
       this.practice = false;
       this.profile = this.freshProfile();
       this.campaign = this.freshCampaign();
@@ -3445,10 +3460,11 @@
       this.totalKills = 0;
       this.playPhase("intro");
     }
-    setDifficulty(id2) {
+    setDifficulty(id2, { remember = true } = {}) {
       if (["story", "standard", "tactical"].includes(id2)) {
         this.settings.difficulty = id2;
-        this.campaign.difficulty = id2;
+        if (this.campaignLoaded) this.campaign.difficulty = id2;
+        if (remember) this.settings.preferredDifficulty = id2;
         this.saveSettings();
       }
     }
@@ -3491,6 +3507,15 @@
       this.setMode("loadout");
     }
     showJournal() {
+      this.journalCampaign = null;
+      if (!this.campaignLoaded && this.mode === "menu") {
+        const saved = this.readSave();
+        if (!saved) {
+          this.toast("\u5C1A\u65E0\u53EF\u9605\u8BFB\u7684\u884C\u52A8\u6863\u6848\u3002");
+          return;
+        }
+        this.journalCampaign = this.normalizeCampaign(saved.campaign);
+      }
       this.backMode = this.mode;
       if (this.mode === "playing") this.save();
       this.setMode("journal");
@@ -3525,6 +3550,7 @@
       else if (["guide", "settings"].includes(this.mode) && this.ui?.back) this.ui.back();
       else if (["loadout", "journal", "chapters"].includes(this.mode)) {
         const previous = this.backMode || "menu";
+        this.journalCampaign = null;
         if (previous === "dialogue") {
           this.mode = previous;
           this.input?.clear();
@@ -3534,6 +3560,7 @@
     }
     startMission(id2 = this.campaign.mission) {
       if (!Number.isInteger(id2) || id2 < 0 || id2 >= LEVELS.length) return;
+      if (!this.practice) this.campaignLoaded = true;
       this.campaign.mission = id2;
       this.campaign.stage = 0;
       this.campaign.sceneIndex = 0;
@@ -3768,8 +3795,8 @@
         this.toast("\u540E\u52E4\u6536\u5230\u884C\u52A8\u8BB0\u5F55 \xB7 \u83B7\u5F97 " + a.name);
       }
     }
-    determineEnding() {
-      const f = this.campaign.flags || {}, scores = { public: Number(f.public) || 0, care: Number(f.care) || 0, contain: Number(f.contain) || 0 };
+    determineEnding(campaign = this.campaign) {
+      const f = campaign.flags || {}, scores = { public: Number(f.public) || 0, care: Number(f.care) || 0, contain: Number(f.contain) || 0 };
       return Object.keys(scores).sort((a, b) => scores[b] - scores[a])[0];
     }
     startStage() {
@@ -4688,7 +4715,7 @@
       return true;
     }
     save() {
-      if (this.practice) return;
+      if (this.practice || !this.campaignLoaded) return;
       try {
         const data = { version: 1, campaign: this.campaign, profile: this.profile, current: this.makeSnapshot(), checkpoint: this.checkpoint, lastResult: this.lastResult || null, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
@@ -4714,6 +4741,8 @@
         this.loadAvailable = false;
         return;
       }
+      this.campaignLoaded = true;
+      this.journalCampaign = null;
       this.practice = false;
       this.campaign = this.normalizeCampaign(s36.campaign);
       this.campaign.completed = [...new Set(this.campaign.completed.filter((i) => Number.isInteger(i) && i >= 0 && i < 18))];
@@ -4724,7 +4753,7 @@
       this.profile.grenades = this.profile.grenades || { frag: 2, smoke: 2, flash: 2 };
       this.checkpoint = s36.checkpoint;
       this.lastResult = s36.lastResult;
-      this.setDifficulty(this.campaign.difficulty || this.settings.difficulty);
+      this.setDifficulty(this.settings.preferredDifficulty || this.campaign.difficulty || this.settings.difficulty, { remember: false });
       const restored = s36.current ? this.restoreSnapshot(s36.current) : false;
       const phase = this.campaign.phase;
       if (phase === "won") {
@@ -5409,6 +5438,8 @@
       });
     }
     mount(html, mode, focus = true) {
+      const generation = (this.mountGeneration || 0) + 1;
+      this.mountGeneration = generation;
       const repeated = this.lastMountedMode === mode;
       this.lastMountedMode = mode;
       const active = document.activeElement, focusKey = active?.id ? `#${active.id}` : ["setting", "journal", "slot", "attachment", "weapon"].find((key) => active?.dataset?.[key]);
@@ -5425,6 +5456,9 @@
       document.body.classList.toggle("large-text", !!this.g.settings?.largeText);
       document.body.classList.toggle("third-person-view", !!this.g.renderer?.is3D);
       if (focus) requestAnimationFrame(() => {
+        if (this.mountGeneration !== generation) return;
+        const current = document.activeElement;
+        if (current && this.overlay.contains(current) && !current.disabled && current.getClientRects().length) return;
         const retained = repeated && previousFocus ? this.overlay.querySelector(previousFocus) : null, el2 = retained || this.overlay.querySelector("[data-autofocus]") || this.overlay.querySelector(".primary:not([disabled])") || this.overlay.querySelector("button:not([disabled])");
         el2?.focus({ preventScroll: true });
       });
@@ -5509,16 +5543,16 @@
       }
     }
     menu() {
-      const g = this.g, hasSave = typeof g.hasSave === "function" ? g.hasSave() : !!g.hasSave, completed = g.campaign?.completed?.length || 0;
+      const g = this.g, hasSave = typeof g.hasSave === "function" ? g.hasSave() : !!g.hasSave, completed = (g.menuCampaign || g.campaign)?.completed?.length || 0, difficulty = g.menuDifficulty || g.settings?.difficulty || "standard";
       this.mount(`<section class="screen menu-screen">
    <div><div class="brand-line"><div class="brand-square"></div><span>WHITE FALCON CITY<br>TACTICAL INCIDENT / 09</span></div><h1 class="menu-title">DEAD<span>CIRCUIT</span></h1><h2 class="menu-cn">\u65AD\u7EBF\u534F\u8BAE</h2><p class="menu-description">\u5F53\u4E00\u5EA7\u57CE\u5E02\u88AB\u91CD\u65B0\u5212\u5206\u654C\u6211\uFF0C<br>\u4F60\u8981\u51B3\u5B9A\uFF0C\u67AA\u53E3\u8FD8\u8BE5\u542C\u8C01\u7684\u547D\u4EE4\u3002<br>\u7A7F\u8FC7\u5C01\u9501\u7EBF\uFF0C\u62C6\u5F00\u8C0E\u8A00\uFF0C\u628A\u4EBA\u5E26\u56DE\u5BB6\u3002</p>
     <div class="menu-buttons">${hasSave ? button("continueBtn", `\u7EE7\u7EED\u884C\u52A8 <span>${completed}/18 \u2192</span>`, "primary", "data-autofocus") : ""}${button("newGameBtn", `\u5F00\u59CB\u65B0\u6218\u5F79 <span>\u2192</span>`, hasSave ? "secondary" : "primary", hasSave ? "" : "data-autofocus")}${button("practiceBtn", "\u6218\u672F\u8BAD\u7EC3\u573A <span>\u2197</span>", "secondary")}</div>
-    <div class="difficulty-picker"><span>\u884C\u52A8\u96BE\u5EA6</span><select id="menuDifficulty" aria-label="\u9009\u62E9\u6E38\u620F\u96BE\u5EA6">${Object.entries(DIFFICULTIES).map(([id2, name]) => `<option value="${id2}" ${g.settings?.difficulty === id2 ? "selected" : ""}>${name}</option>`).join("")}</select></div>
+    <div class="difficulty-picker"><span>\u884C\u52A8\u96BE\u5EA6</span><select id="menuDifficulty" aria-label="\u9009\u62E9\u6E38\u620F\u96BE\u5EA6">${Object.entries(DIFFICULTIES).map(([id2, name]) => `<option value="${id2}" ${difficulty === id2 ? "selected" : ""}>${name}</option>`).join("")}</select></div>
     <div class="menu-secondary">${button("guideBtn", "\u6218\u672F\u624B\u518C", "quiet")}${button("settingsBtn", "\u8BBE\u7F6E", "quiet")}${hasSave ? button("menuJournalBtn", "\u884C\u52A8\u6863\u6848", "quiet") : ""}</div><p class="build-note">3D \u8D8A\u80A9\u7B2C\u4E09\u4EBA\u79F0 / 18 \u5904\u72EC\u7ACB\u6218\u573A / \u6A21\u5757\u5316\u519B\u68B0<br>\u952E\u9F20 \xB7 \u6807\u51C6\u624B\u67C4 \xB7 \u89E6\u5C4F\u3000/\u3000\u672C\u5730\u81EA\u52A8\u5B58\u6863</p></div>
    <aside class="menu-intel"><div class="intel-top"><span>\u57CE\u5E02\u89C2\u6D4B / WFC\u201404</span><span class="live">\u25CF SIGNAL UNSTABLE</span></div><div class="city-art" aria-hidden="true">${[[2, 15, 35], [12, 14, 56], [25, 13, 73], [38, 17, 45], [53, 12, 88], [67, 16, 64], [80, 15, 44], [94, 10, 67]].map(([x, w, h]) => `<i class="city-building" style="--x:${x}%;--w:${w}%;--h:${h}%"></i>`).join("")}<i class="crosshair"></i><div class="city-caption">\u767D\u96BC\u57CE / 05:42 AM<br>RECOGNITION NETWORK: COMPROMISED</div></div><div class="intel-bottom"><div class="eyebrow">\u4E00\u591C\u4E4B\u540E\uFF0C\u6574\u5EA7\u57CE\u6210\u4E3A\u654C\u533A</div><h2>\u9009\u62E9\u8DEF\u7EBF\uFF0C\u4E5F\u9009\u62E9\u4EE3\u4EF7\u3002</h2><p>\u5728\u5B89\u4FDD\u7684\u4EA4\u53C9\u706B\u529B\u3001\u611F\u67D3\u8005\u7684\u8FFD\u730E\u4E0E\u65E0\u4EBA\u673A\u7684\u626B\u63CF\u4E4B\u95F4\u7A7F\u884C\u3002\u5173\u95ED\u7535\u8DEF\u3001\u6253\u5F00\u4FA7\u95E8\u3001\u6539\u53D8\u63A9\u4F53\uFF1B\u6BCF\u4E00\u6B21\u5F00\u706B\uFF0C\u90FD\u4F1A\u8BA9\u522B\u7684\u4E1C\u897F\u542C\u89C1\u3002</p><div class="faction-row"><div><i></i><strong>\u96C6\u56E2\u5B89\u4FDD</strong><small>\u534F\u540C \xB7 \u538B\u5236 \xB7 \u5305\u6284</small></div><div><i></i><strong>\u5931\u63A7\u611F\u67D3\u8005</strong><small>\u58F0\u6E90 \xB7 \u8FFD\u730E \xB7 \u56F4\u56F0</small></div><div><i></i><strong>\u65E0\u4EBA\u6B66\u88C5</strong><small>\u626B\u63CF \xB7 \u9884\u8B66 \xB7 \u5F31\u70B9</small></div></div></div></aside>
   </section>`, "menu");
       this.on("continueBtn", () => g.continueGame());
-      this.on("newGameBtn", () => hasSave ? this.confirmNew() : g.startNew(g.settings?.difficulty || "standard"));
+      this.on("newGameBtn", () => hasSave ? this.confirmNew() : g.startNew(g.menuDifficulty || g.settings?.difficulty || "standard"));
       this.on("practiceBtn", () => g.startPractice());
       this.on("guideBtn", () => this.open("guide"));
       this.on("settingsBtn", () => this.open("settings"));
@@ -5528,7 +5562,7 @@
     confirmNew() {
       this.mount(`<section class="screen screen-narrow panel confirm-box"><div class="eyebrow">REPLACE OPERATION / \u65B0\u7684\u884C\u52A8\u6863\u6848</div><h2>\u5F00\u59CB\u65B0\u7684\u6218\u5F79\uFF1F</h2><p>\u5F53\u524D\u6218\u5F79\u7684\u4EFB\u52A1\u68C0\u67E5\u70B9\u3001\u89D2\u8272\u9009\u62E9\u548C\u519B\u68B0\u8FDB\u5EA6\u5C06\u88AB\u65B0\u6863\u6848\u66FF\u6362\u3002\u4F60\u4E5F\u53EF\u4EE5\u56DE\u5230\u4E3B\u83DC\u5355\u7EE7\u7EED\u539F\u6765\u7684\u884C\u52A8\u3002</p><div class="actions">${button("cancelNew", "\u4FDD\u7559\u5F53\u524D\u8FDB\u5EA6", "secondary", "data-autofocus")}${button("confirmNew", "\u66FF\u6362\u6863\u6848\u5E76\u5F00\u59CB", "danger")}</div></section>`, "menu");
       this.on("cancelNew", () => this.menu());
-      this.on("confirmNew", () => this.g.startNew(this.g.settings?.difficulty || "standard"));
+      this.on("confirmNew", () => this.g.startNew(this.g.menuDifficulty || this.g.settings?.difficulty || "standard"));
     }
     briefing() {
       const g = this.g, id2 = clamp4(g.campaign?.mission, 0, 17), meta = LEVELS[id2] || {}, chapter2 = CAMPAIGN[id2] || {}, done = g.campaign?.completed || [], profile = g.profile || {}, loadout = profile.loadout || [];
@@ -5650,9 +5684,9 @@
       });
     }
     journal() {
-      const g = this.g, c = g.campaign || {}, completed = c.completed || [], available = CAMPAIGN.filter((_, i) => completed.includes(i) || i === c.mission), id2 = available.some((m) => m.id === this.journalMission) ? this.journalMission : clamp4(c.mission, 0, 17);
+      const g = this.g, c = g.journalCampaign || g.campaign || {}, completed = c.completed || [], available = CAMPAIGN.filter((_, i) => completed.includes(i) || i === c.mission), id2 = available.some((m) => m.id === this.journalMission) ? this.journalMission : clamp4(c.mission, 0, 17);
       this.journalMission = id2;
-      const chapter2 = CAMPAIGN[id2] || {}, choice = c.choices?.[id2], selectedOption = chapter2.choice?.options?.[typeof choice === "object" ? choice.index : choice], full = completed.includes(id2), lines2 = [...id2 === 0 ? INTRO || [] : [], ...chapter2.opening || [], ...chapter2.interlude || [], ...selectedOption?.reply || [], ...chapter2.closing || [], ...id2 === 17 && completed.length === 18 && c.phase === "won" ? ENDINGS[this.g.endingKey] || [] : []], journal = Array.isArray(c.journal) ? c.journal : [];
+      const chapter2 = CAMPAIGN[id2] || {}, choice = c.choices?.[id2], selectedOption = chapter2.choice?.options?.[typeof choice === "object" ? choice.index : choice], full = completed.includes(id2), lines2 = [...id2 === 0 ? INTRO || [] : [], ...chapter2.opening || [], ...chapter2.interlude || [], ...selectedOption?.reply || [], ...chapter2.closing || [], ...id2 === 17 && completed.length === 18 && c.phase === "won" ? ENDINGS[g.determineEnding?.(c) || this.g.endingKey] || [] : []], journal = Array.isArray(c.journal) ? c.journal : [];
       const allNotes = Array.isArray(c.fieldNotes) ? c.fieldNotes : [], notes = allNotes.filter((note) => note && note.mission === id2 && typeof note.text === "string"), noteTexts = new Set(allNotes.map((note) => note?.text));
       const isNoteLine = (line) => String(line?.id || "").includes("fieldnote") || line?.phase === "fieldnote" || line?.type === "fieldnote" || noteTexts.has(line?.text);
       const visibleLines = full ? lines2 : journal.filter((line) => typeof line === "object" && line.mission === id2 && !String(line.id || "").startsWith("radio:") && !isNoteLine(line));
@@ -5684,7 +5718,7 @@
       });
     }
     settings() {
-      const g = this.g, s36 = { minimap: true, aimAssist: true, ...g.settings || {}, reduced: g.settings?.reduced ?? g.settings?.reducedMotion ?? false };
+      const g = this.g, s36 = { minimap: true, aimAssist: true, ...g.settings || {}, reduced: g.settings?.reduced ?? g.settings?.reducedMotion ?? false, difficulty: this.returnMode === "menu" ? g.menuDifficulty || g.settings?.difficulty : g.settings?.difficulty };
       const toggle = (key, title, description) => `<div class="settings-row"><div><strong>${title}</strong><small>${description}</small></div><button class="toggle ${s36[key] ? "" : "off"}" data-setting="${key}" aria-pressed="${!!s36[key]}">${s36[key] ? "\u5F00\u542F" : "\u5173\u95ED"}</button></div>`;
       const sensitivity = (key, id2, title, description, values, fallback) => {
         const current = Number.isFinite(s36[key]) ? s36[key] : fallback, custom = !values.some((v2) => Math.abs(v2 - current) < 1e-7);

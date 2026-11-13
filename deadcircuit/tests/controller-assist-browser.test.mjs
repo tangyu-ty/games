@@ -19,6 +19,7 @@ test('real shoulder-camera controller friction is bounded, respects physical wal
    window.__assistPad={connected:true,id:'Assist standard controller',index:0,mapping:'standard',axes:[0,.25,0,0],buttons:Array.from({length:17},()=>({pressed:false,touched:false,value:0}))};Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>[window.__assistPad]});
   });
   const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.stack||error.message));
+  if(Number(process.env.DC_ASSIST_TEST_CPU)>1){const cdp=await context.newCDPSession(page);await cdp.send('Emulation.setCPUThrottlingRate',{rate:Number(process.env.DC_ASSIST_TEST_CPU)});}
   await page.goto(base+'/deadcircuit/index.html?test=1');await page.locator('#practiceBtn').click();
   const result=await page.evaluate(async()=>{
    const {controllerLookAssist}=await import('/deadcircuit/input3d.js'),g=window.__dc;
@@ -29,9 +30,22 @@ test('real shoulder-camera controller friction is bounded, respects physical wal
    for(let i=0;i<10;i++){r.prepareAim(g);const q=r.projectPoint(enemy,height),tan=Math.tan(r.camera.fov*Math.PI/360);g.player.angle+=Math.atan(q.ndcX*tan*r.camera.aspect);g.player.pitch+=Math.atan(q.ndcY*tan);}
    g.player.angle-=.035;r.prepareAim(g);
    // A standard-controller axis activates the real Input3D path on normal rAF.
-   __assistPad.axes=[0,0,.25,0];
-   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-   const inputTarget=g.input.aimAssistTargetId,active=controllerLookAssist(g,.006,0,.25,0);
+   const tickTrace=[],originalCombat=g.input.combat;
+   // rAF may catch up several physics steps on a slow renderer. Capture the
+   // first actual assisted input step, then release the ordinary controller;
+   // otherwise two render frames can already carry the stick past its target.
+   const first=await new Promise((resolve,reject)=>{
+    const timer=setTimeout(()=>{g.input.combat=originalCombat;__assistPad.axes=[0,0,0,0];reject(Error('No real assisted controller step: '+JSON.stringify(tickTrace)));},3000);
+    g.input.combat=function(dt){
+     originalCombat.call(this,dt);r.updateCamera(g);const q=r.projectPoint(enemy,height);tickTrace.push({dt,elapsed:g.elapsed,yaw:g.player.angle,pitch:g.player.pitch,target:this.aimAssistTargetId,ndcX:q.ndcX,ndcY:q.ndcY,mode:g.mode});
+     if(this.aimAssistTargetId==='assist-target'){
+      const value={inputTarget:this.aimAssistTargetId,active:controllerLookAssist(g,.006,0,.25,0)};
+      __assistPad.axes=[0,0,0,0];this.combat=originalCombat;clearTimeout(timer);resolve(value);
+     }
+    };
+    __assistPad.axes=[0,0,.25,0];
+   });
+   const {inputTarget,active}=first;
    __assistPad.axes=[0,0,0,0];const neutral=controllerLookAssist(g,0,0,0,0);
    g.settings.aimAssist=false;const off=controllerLookAssist(g,.006,0,.25,0);g.settings.aimAssist=true;
    const cleanLevel=g.level;g.level={...cleanLevel,walls:[{id:'assist-wall',x:1030,y:950,w:35,h:100,material:'concrete',active:true}]};r.prepareAim(g);const wall=controllerLookAssist(g,.006,0,.25,0),wallCrosshairBlocked=!!g.aimPoint3D?.blocked&&!g.aimPoint3D?.enemyId;
@@ -43,9 +57,9 @@ test('real shoulder-camera controller friction is bounded, respects physical wal
    const automaticShots=(g.missionShots||0)-shotsBefore;r.prepareAim(g);const aim={...g.aimPoint3D};g.player.fireCooldown=0;g.player.action=null;g.player.burst=null;g.firePlayer();
    const bullet=g.bullets.at(-1),from={x:bullet.x,y:bullet.y,height:bullet.height},to={x:aim.x-from.x,y:aim.y-from.y,height:aim.height-from.height};
    const cosine=(to.x*.02*bullet.vx*.02+to.y*.02*bullet.vy*.02+to.height*(bullet.vz||0))/(Math.hypot(to.x*.02,to.y*.02,to.height)*Math.hypot(bullet.vx*.02,bullet.vy*.02,bullet.vz||0));
-   return{inputTarget,active,neutral,off,wall,wallCrosshairBlocked,mouse,before,after,cosine,automaticShots,shots:(g.missionShots||0)-shotsBefore};
+   return{inputTarget,active,neutral,off,wall,wallCrosshairBlocked,mouse,before,after,cosine,automaticShots,shots:(g.missionShots||0)-shotsBefore,tickTrace};
   });
-  assert.equal(result.inputTarget,'assist-target');assert.equal(result.active.targetId,'assist-target');assert.ok(result.active.friction>=.72&&result.active.friction<1);
+  assert.equal(result.inputTarget,'assist-target',JSON.stringify(result.tickTrace));assert.equal(result.active.targetId,'assist-target');assert.ok(result.active.friction>=.72&&result.active.friction<1);
   for(const key of ['off','wall','mouse','neutral'])assert.equal(result[key].friction,1,key+' does not assist');
   assert.equal(result.wallCrosshairBlocked,true,'The real 3D camera also sees the same wall obstruction');assert.equal(result.automaticShots,0);assert.equal(result.shots,1,'Only the explicit trigger fixture fires a round');
   assert.deepEqual(result.after,result.before,'No right-stick input means no automatic tracking');
