@@ -187,7 +187,7 @@ class Pilot{
   const goal=this.chooseGoal(state);this.lastGoal=goal?{id:goal.id,x:goal.x,y:goal.y}:null;
   let waypoint=goal?this.plan(state,goal,now):p,move=unit(waypoint.x-p.x,waypoint.y-p.y),aim={...move};
   const goalDistance=goal?distance(p,goal):Infinity;
-  if(goalDistance<(goal?.waitForEscort?170:62))move={x:0,y:0};
+  if(goalDistance<(goal?.waitForEscort?170:62)&&lineOfSight(p,goal,l))move={x:0,y:0};
   const nearEnemies=state.enemies.filter(e=>e.visibleToPlayer&&distance(p,e)<Math.min(1050,(state.weapon?.range||650)+180));
   const prioritized=nearEnemies.map(e=>{
    const d=distance(p,e),shootable=lineOfFire(state,e);
@@ -245,7 +245,7 @@ class Pilot{
   else if(state.ammo&&state.ammo.mag<Math.max(1,state.weapon.mag*.25)&&!threat&&!action&&this.pulse('reload',now,2.5))buttons.push(2);
   const closed=l.doors.filter(d=>!d.open&&d.active!==false&&segmentRect(p,waypoint,d,22)).sort((a,b)=>distance(p,{x:a.x+a.w/2,y:a.y+a.h/2})-distance(p,{x:b.x+b.w/2,y:b.y+b.h/2}))[0];
   if(closed){const center={x:closed.x+closed.w/2,y:closed.y+closed.h/2};if(distance(p,center)<160){buttons.push(0,10);if(distance(p,center)<75)move={x:0,y:0};}}
-  if(goal&&!goal.waitForEscort&&goalDistance<78&&!closeThreat){
+  if(goal&&!goal.waitForEscort&&goalDistance<78&&!closeThreat&&lineOfSight(p,goal,l)){
    const escortReady=goal.type!=='exit'||!l.objects.some(o=>o.following&&!o.delivered&&distance(o,l.exit)>135);
    if(escortReady){buttons.push(0);if(!threat||goalDistance<60)move={x:0,y:0};}
   }

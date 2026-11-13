@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "candidateCommit": "0e5e4a5484bd417d350325d8df7e4318cfb50994",
+  "command": "npm test",
+  "scope": "Both Tidekeeper and Dead Circuit, including browser, geometry, narrative, AI, armory, campaign branches and standalone checks. Controlled fixtures are not natural playtime.",
+  "tests": 139,
+  "pass": 139,
+  "fail": 0,
+  "cancelled": 0,
+  "skipped": 0,
+  "durationMilliseconds": 287232.166242,
+  "finishedAt": "2026-11-13T06:16:51.870901+00:00",
+  "node": "v24.22.1",
+  "playwright": "1.65.0",
+  "browser": "Chromium 156.0.8078.79 built on Debian GNU/Linux 13 (trixie)",
+  "standaloneSha256": "e2b0368a96ca043679fe9f08db410270e54f351b5f2ba95be0c8e4096bafc5bc"
+}

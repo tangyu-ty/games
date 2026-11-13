@@ -6,7 +6,7 @@
 
 运行仓库根目录的 `npm start`，打开 **http://localhost:3000/deadcircuit/**。
 
-`npm run build:deadcircuit` 生成内置全部代码、关卡、美术和音乐的 `dist/deadcircuit.html`。下载后可离线打开；浏览器限制本地文件的手柄或存储权限时，请使用 HTTP 方式。
+[离线单文件成品](../dist/deadcircuit.html)内置全部代码、关卡、美术和音乐，开发时可用 `npm run build:deadcircuit` 重新生成。下载后可离线打开；浏览器限制本地文件的手柄或存储权限时，请使用 HTTP 方式。
 
 ![十八处实际关卡的空间布局](docs/locations.png)
 
@@ -58,3 +58,5 @@
 `npm test` 执行仓库中的两款游戏测试。单独执行 `node --test --test-concurrency=1 deadcircuit/tests/*.test.mjs` 可验证本作。
 
 测试包括地图独立性与可达性、配件和弹药守恒、敌人感知与阵营行为、浏览器 UI、战斗、重试和存档。缩短条件、直接设置位置等测试夹具只用来验证分支，不能声称完成自然时长。当前实测浏览器为 Chromium；标准 Gamepad API 自动输入不等同于实体手柄型号实测。
+
+详细检查方法、修复记录与实测边界见 [QA.md](QA.md)。
