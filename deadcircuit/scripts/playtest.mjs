@@ -9,7 +9,7 @@ import {fileURLToPath} from 'node:url';
 import {performance} from 'node:perf_hooks';
 import {chromium} from 'playwright';
 import {browserPath} from '../../scripts/browser.mjs';
-import {findPath,pointWalkable,segmentRect,distance,clamp,lineOfSight,segmentRectTime} from '../geometry.js';
+import {findPath,pointWalkable,segmentRect,distance,clamp,lineOfSight,segmentRectTime,movementObstacles,sweptCircleRect} from '../geometry.js';
 
 const gameRoot=fileURLToPath(new URL('../',import.meta.url));
 const repoRoot=path.dirname(gameRoot.replace(/\/$/,''));
@@ -76,7 +76,7 @@ async function readState(){
   return{
    mode:g.mode,mission:c.mission,stage:c.stage,phase:c.phase,sceneIndex:c.sceneIndex,completed:[...c.completed],choices:{...c.choices},fieldNotes:(c.fieldNotes||[]).map(n=>({id:n.id,mission:n.mission,title:n.title})),deaths:c.deaths,totalPlay:c.totalPlay,time:g.time,elapsed:g.elapsed,
    is3D,unitScale:scale,cameraData,inputLook:{yawRate:2.4*Math.max(.25,Math.min(3,g.settings.lookSensitivity||1)),pitchRate:1.65*Math.max(.25,Math.min(3,g.settings.lookSensitivity||1)),adsMultiplier:.55,deadzone:g.settings.deadzone??.18,pitchLimit:1.08,invertY:!!g.settings.invertY},muzzle3D:g.muzzle3D?{x:g.muzzle3D.x,y:g.muzzle3D.y,height:g.muzzle3D.height}:null,
-   difficulty:g.settings.difficulty,extractionReady:g.extractionReady,objective:g.objectiveText,interactionHint:g.interactionHint||'',interactionProgress:g.interactionProgress||0,
+   difficulty:g.settings.difficulty,grenadeType:g.grenadeType,extractionReady:g.extractionReady,objective:g.objectiveText,interactionHint:g.interactionHint||'',interactionProgress:g.interactionProgress||0,
    completedObjects:[...(g.completedObjectIds||[])],missionKills:g.missionKills,missionShots:g.missionShots||0,stageStartKills:g.stageStartKills||0,
    player:p?take(p,['x','y','r','hp','maxHp','armor','maxArmor','stamina','angle','pitch','stance','coverId','action','weaponIndex','slideTime','throwCooldown','carrying']):null,
    weapon:p?g.weaponStats():null,weaponId:p?g.profile.loadout[p.weaponIndex||0]:null,ammo:p?{...g.profile.ammo[g.profile.loadout[p.weaponIndex||0]]}:null,
@@ -87,6 +87,7 @@ async function readState(){
    bullets:g.bullets.filter(b=>b.life>0&&b.faction!=='player').map(b=>take(b,['x','y','vx','vy','r','faction','projectile','height','vz','ballistic3D'])),
    ballisticPlayerHitEffects:g.effects.filter(e=>e.type==='hit'&&Number.isFinite(e.height)).map(e=>take(e,['x','y','height','life'])),
    effects:g.effects.filter(e=>['smoke','acid'].includes(e.type)&&e.life>0).map(e=>take(e,['x','y','radius','life','type'])),
+   pickups:g.pickups.map(e=>take(e,['x','y','type','amount','life'])),
    interactionTarget:g.interactionTarget?{id:g.interactionTarget.id,type:g.interactionTarget.type,x:g.interactionTarget.x,y:g.interactionTarget.y}:null,
    result:g.lastResult?take(g.lastResult,['mission','seconds','kills','optional']):null,
    numbersValid:!p||[p.x,p.y,p.hp,p.armor,p.stamina,...(is3D?[p.pitch??0]:[]),...g.enemies.flatMap(e=>[e.x,e.y,e.hp])].every(Number.isFinite)
@@ -112,7 +113,8 @@ function padFor(state,moveVector,aimVector,buttons,aimTarget=null){
  const chosen=[...new Set(buttons)];if(Math.abs(yawError)>.55){const ads=chosen.indexOf(6);if(ads>=0)chosen.splice(ads,1);}
  const multiplier=chosen.includes(6)?.55:1,yawRate=(state.inputLook?.yawRate||2.4)*multiplier,pitchRate=(state.inputLook?.pitchRate||1.65)*multiplier;
  const yawControl=Math.abs(yawError)<.004?0:clamp(yawError*4.6/yawRate,-1,1),pitchControl=Math.abs(pitchError)<.003?0:clamp(-pitchError*4.2/pitchRate*(state.inputLook?.invertY?-1:1),-1,1);
- if(Math.abs(yawError)>.085||Math.abs(pitchError)>.075||point?.projection?.inFront===false){const fire=chosen.indexOf(7);if(fire>=0)chosen.splice(fire,1);}
+ const targetDistance=point?distance(p,point):500,fireTolerance=clamp((point?.r||15)/Math.max(80,targetDistance)*.7,.012,.045);
+ if(Math.abs(yawError)>fireTolerance||Math.abs(pitchError)>.035||point?.projection?.inFront===false){const fire=chosen.indexOf(7);if(fire>=0)chosen.splice(fire,1);}
  state.pilotAim={targetId:point?.id||null,yawError,pitchError,desiredPitch,projected,controls:{localX,localY,yawControl,pitchControl}};
  const dz=state.inputLook?.deadzone??.18;return{axes:[inverseAxis(localX,dz),inverseAxis(localY,dz),inverseAxis(yawControl,dz),inverseAxis(pitchControl,dz)],buttons:chosen};
 }
@@ -126,12 +128,12 @@ function lineOfFire(state,enemy){
 }
 
 class Pilot{
- constructor(){this.path=[];this.pathIndex=0;this.routeAt=0;this.goalKey='';this.geometryKey='';this.lastPosition=null;this.stuck=0;this.pulseTimes={};this.healUntil=0;this.navFailures=0;this.lastGoal=null;this.dodgeSide=1;}
+ constructor(){this.path=[];this.pathIndex=0;this.routeAt=0;this.goalKey='';this.geometryKey='';this.lastPosition=null;this.stuck=0;this.pulseTimes={};this.navFailures=0;this.lastGoal=null;this.dodgeSide=1;this.lastHealth=null;this.lastDamageAt=-10;this.lastAction=null;this.lastMedkits=null;this.shelter=null;this.shelterAt=-10;this.medicalIntent=false;this.lastCover=null;}
  pulse(name,now,delay){if((this.pulseTimes[name]||0)>now)return false;this.pulseTimes[name]=now+delay;return true;}
  plan(state,goal,now){
   const level=state.level,p=state.player;
   const geometryKey=level.doors.map(d=>d.id+':'+d.open).join('|')+';'+level.walls.filter(w=>w.active===false||w.hp<=0).map(w=>w.id).join('|')+';'+level.covers.map(c=>c.id+':'+c.x+':'+c.y+':'+c.active).join('|');
-  const playerRadius=(p.r||15)+3,escortRadius=Math.max(playerRadius,...level.objects.filter(o=>o.following&&!o.delivered&&o.hp>0).map(o=>(o.r||20)+2));
+  const physicalRadius=(p.r||15)-.05,playerRadius=(p.r||15)+3,escortRadius=Math.max(playerRadius,...level.objects.filter(o=>o.following&&!o.delivered&&o.hp>0).map(o=>(o.r||20)+2));
   const key=state.mission+':'+state.stage+':'+goal.id+':radius'+escortRadius;
   if(key!==this.goalKey||geometryKey!==this.geometryKey||now-this.routeAt>.9||this.stuck>1.4||!this.path.length){
    this.routeAt=now;this.goalKey=key;this.geometryKey=geometryKey;this.pathIndex=0;
@@ -155,7 +157,9 @@ class Pilot{
      for(let step=0;step<8;step++){
       const a=step*Math.PI/4,point={x:p.x+Math.cos(a)*ring,y:p.y+Math.sin(a)*ring};
       if(!pointWalkable(point,map,radius,{ignoreDoors:true}))continue;
-      const prefix=findPath(p,point,map,playerRadius,{ignoreDoors:true});if(prefix.length)origins.push({point,prefix});
+      // A legal actor may touch a wall more closely than the route's comfort
+      // margin. Escape using its actual body; retain the wider margin afterward.
+      const prefix=findPath(p,point,map,physicalRadius,{ignoreDoors:true});if(prefix.length)origins.push({point,prefix});
      }
      if(origins.length>=4)break;
     }
@@ -170,6 +174,7 @@ class Pilot{
    // Some objectives intentionally require crossing a damaged corridor. A safe
    // detour is preferred, but a fictitious navigation wall cannot softlock play.
    if(!this.path.length&&safeLevel!==level)this.path=route(level,escortRadius);
+   if(!this.path.length){this.path=findPath(p,goal,level,physicalRadius,{ignoreDoors:true});this.navigationRadius=physicalRadius;}
    if(!this.path.length&&escortRadius>playerRadius){this.path=findPath(p,goal,level,playerRadius,{ignoreDoors:true});this.navigationRadius=playerRadius;}
    if(!this.path.length&&distance(p,goal)>90){
     for(const radius of [48,80,128]){
@@ -179,7 +184,8 @@ class Pilot{
    }
    if(!this.path.length&&distance(p,goal)>120){this.navFailures++;if(this.navFailures%20===1)event('route_missing',{mission:state.mission,stage:state.stage,goal:{id:goal.id,x:goal.x,y:goal.y},player:{x:p.x,y:p.y},navigationRadius:this.navigationRadius});}
   }
-  while(this.path[this.pathIndex]&&distance(p,this.path[this.pathIndex])<37)this.pathIndex++;
+  const obstacles=movementObstacles(level,{ignoreDoors:true});
+  while(this.path[this.pathIndex]&&distance(p,this.path[this.pathIndex])<20){const next=this.path[this.pathIndex+1];if(next&&obstacles.some(rect=>sweptCircleRect(p,next,rect,physicalRadius)))break;this.pathIndex++;}
   return this.path[this.pathIndex]||goal;
  }
  chooseGoal(state){
@@ -198,9 +204,10 @@ class Pilot{
   const ready=targets.filter(o=>!(o.requires||[]).some(id=>!completed.has(id)));
   const ordered=(ready.length?ready:targets).sort((a,b)=>distance(p,a)-distance(p,b));
   const main=ordered[0];
-  if(optional.length&&(!main||distance(p,optional[0])<distance(p,main)*1.15))return optional[0];
-  const scarce=state.ammo&&state.ammo.mag+state.ammo.reserve<55||p.hp<60&&state.profile.medkits<1;
-  if(scarce){const supply=l.objects.filter(o=>o.optional&&o.type==='supply'&&!o.completed&&o.active!==false&&distance(o,p)<550).sort((a,b)=>distance(p,a)-distance(p,b))[0];if(supply)return supply;}
+  const nearbyDanger=state.enemies.some(e=>e.visibleToPlayer&&e.targetingPlayer&&distance(p,e)<850&&!e.stunTime);
+  const scarce=state.ammo&&state.ammo.mag+state.ammo.reserve<55||p.armor<30||p.hp<70&&state.profile.medkits<2;
+  if(scarce&&!nearbyDanger){const supply=l.objects.filter(o=>o.optional&&o.type==='supply'&&!o.completed&&o.active!==false&&distance(o,p)<800).sort((a,b)=>distance(p,a)-distance(p,b))[0];if(supply)return supply;}
+  if(optional.length&&!nearbyDanger&&p.hp>=65&&(!main||distance(p,optional[0])<distance(p,main)*1.15))return optional[0];
   if(main)return main;
   if(stage?.requiredKills&&state.missionKills-state.stageStartKills<stage.requiredKills){const enemy=state.enemies.sort((a,b)=>distance(p,a)-distance(p,b))[0];if(enemy)return{...enemy,id:'quota:'+enemy.id};}
   return null;
@@ -222,6 +229,9 @@ class Pilot{
   }).sort((a,b)=>b.score-a.score);
   const threat=prioritized.find(e=>e.d<540||e.targetingPlayer||goal&&distance(e,goal)<250);
   const action=p.action?.type;
+  if(this.lastHealth!==null&&p.hp<this.lastHealth-.1)this.lastDamageAt=now;
+  if(this.lastAction==='heal'&&action!=='heal')event(state.profile.medkits<this.lastMedkits?'heal_complete':'heal_interrupted',{mission:state.mission,stage:state.stage,hp:p.hp,medkits:state.profile.medkits});
+  this.lastHealth=p.hp;this.lastAction=action;this.lastMedkits=state.profile.medkits;
   const acid=state.effects.find(e=>e.type==='acid'&&distance(p,e)<(e.radius||75)+22);
   const hot=l.floorZones.find(z=>z.active!==false&&['electric','fire'].includes(z.type)&&p.x>z.x-10&&p.x<z.x+z.w+10&&p.y>z.y-10&&p.y<z.y+z.h+10);
   let hazardEscape=null;
@@ -232,9 +242,26 @@ class Pilot{
   }
   if(action==='heal'&&!hazardEscape)return padFor(state,{x:0,y:0},{x:Math.cos(p.angle),y:Math.sin(p.angle)},[]);
   const closeThreat=prioritized.some(e=>e.d<220&&!e.stunTime);
-  if(p.hp<58&&state.profile.medkits>0&&!action&&!closeThreat&&!hazardEscape&&this.pulse('heal',now,3.5)){
-   event('heal_input',{mission:state.mission,stage:state.stage,hp:p.hp});return padFor(state,{x:0,y:0},{x:Math.cos(p.angle),y:Math.sin(p.angle)},[12]);
-  }
+  // A medkit takes 2.1 s and is interrupted by any hit. Find real geometric
+  // cover before attempting it; a 220 px distance check alone ignores rifles.
+  const threats=state.enemies.filter(e=>!e.stunTime&&distance(p,e)<900&&(e.targetingPlayer||e.visibleToPlayer));
+  const exposed=point=>threats.some(e=>distance(point,e)<Math.max(450,e.range||700)&&lineOfSight(point,e,l));
+  if(p.hp<65&&state.profile.medkits>0&&!hazardEscape){
+   if(!exposed(p)&&now-this.lastDamageAt>.8&&!action&&this.pulse('heal',now,3.5)){
+    event('heal_input',{mission:state.mission,stage:state.stage,hp:p.hp,medkits:state.profile.medkits});return padFor(state,{x:0,y:0},{x:Math.cos(p.angle),y:Math.sin(p.angle)},[12]);
+   }
+   if(exposed(p)){
+    if(!this.shelter||now-this.shelterAt>2.5||exposed(this.shelter)){
+     const points=[];
+     for(const radius of [100,180,280,420,600])for(let i=0;i<16;i++){const a=i*Math.PI/8;points.push({x:p.x+Math.cos(a)*radius,y:p.y+Math.sin(a)*radius});}
+     for(const w of [...l.walls,...l.covers.filter(c=>c.low===false)]){const pad=35;points.push({x:w.x-pad,y:clamp(p.y,w.y-pad,w.y+w.h+pad)},{x:w.x+w.w+pad,y:clamp(p.y,w.y-pad,w.y+w.h+pad)},{x:clamp(p.x,w.x-pad,w.x+w.w+pad),y:w.y-pad},{x:clamp(p.x,w.x-pad,w.x+w.w+pad),y:w.y+w.h+pad});}
+     const candidates=points.filter(q=>distance(p,q)<750&&pointWalkable(q,l,(p.r||15)+1)&&!exposed(q)).sort((a,b)=>distance(p,a)-distance(p,b));
+     this.shelter=null;
+     for(const q of candidates.slice(0,20)){const route=findPath(p,q,l,(p.r||15)-.05);if(route.length){this.shelter={...q,id:'medical-shelter'};this.shelterAt=now;event('medical_shelter',{mission:state.mission,stage:state.stage,x:q.x,y:q.y,hp:p.hp});break;}}
+    }
+    if(this.shelter){const next=this.plan(state,this.shelter,now),escape=unit(next.x-p.x,next.y-p.y);return padFor(state,escape,threat?unit(threat.x-p.x,threat.y-p.y):escape,p.stamina>18?[10]:[],threat||this.shelter);}
+   }
+  }else this.shelter=null;
   let firing=false;
   if(threat){
    aimPoint=threat;const predict=threat.faction==='infected'&&threat.type!=='spitter'?.04:0;

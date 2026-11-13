@@ -24,14 +24,27 @@
   "standaloneSha256": "c52db83d065706d3ac539cd45b3acd4a3eebd28f5ae2acf602cedbd28b9505c8",
   "regressionLogSha256": "5dffd2883f711a269a151f16800b1a2961405765fcb09aa5dfbb97d81cd0222b",
   "naturalCampaignValidation": {
-    "status": "in_progress",
+    "status": "failed",
     "completed": false,
     "runDirectory": "artifacts/deadcircuit-3d-final-campaign",
     "startedAt": "2026-11-13T08:55:03.978Z",
-    "observedAt": "2026-11-13T08:56:39.944Z",
+    "updatedAt": "2026-11-13T08:59:08.912Z",
     "sourceSha256AtLoad": "b8eaa578291320eb9603c42cea7372d559fb3c5e149a5bf91aa98454b5b03ad6",
-    "sourceUnchangedAtObservation": true,
-    "scope": "The complete eighteen-chapter natural-input run has restarted on this frozen source and is still in progress. Neither this regression nor the earlier short diagnostic proves its completion or a two-to-three-hour playtime."
+    "sourceSha256AtEnd": "b8eaa578291320eb9603c42cea7372d559fb3c5e149a5bf91aa98454b5b03ad6",
+    "sourceUnchanged": true,
+    "wallSeconds": 244.94394839,
+    "validatedPlayingSeconds": 93.38333333332932,
+    "simulatedReadingSeconds": 120.97263289099996,
+    "completedMissions": 0,
+    "completedStages": 2,
+    "completedObjectives": 4,
+    "choices": 1,
+    "fieldNotes": 0,
+    "deaths": 5,
+    "retries": 5,
+    "failure": "The natural-input pilot exhausted its five checkpoint retries in the third stage of the first mission; the recorded error is runner retry exhaustion, not a reported application script error.",
+    "pilotFindings": "A navigation radius larger than the in-game actor misclassified a legal wall-adjacent position as unreachable. Healing attempted in enemy sight was interrupted before consuming a medical kit. These findings motivate changes to the pilot, not a claim that the level is impossible.",
+    "scope": "This run did not complete the first mission or establish natural eighteen-chapter completion, balance, or two-to-three-hour playtime."
   },
   "sourceHashMethod": "Same as playtest.mjs productHash: sorted top-level deadcircuit .js/.css/.html files plus vendor/three.js; hash each filename, NUL, bytes, NUL.",
   "previousRegressions": [
@@ -55,5 +68,35 @@
     "sourceSha256": "5351851cfd47a63a232bb386da963fdc2f43ed6237bfea10f58298a530b8a9ed",
     "sameSourceAsThisRegression": false,
     "scope": "The 91.43-second controller diagnostic belongs to the earlier source, before the final save/menu/focus fixes; it is not a new diagnostic of this frozen revision or a campaign completion."
+  },
+  "firstMissionRepairedPilot": {
+    "status": "complete",
+    "runDirectory": "artifacts/deadcircuit-3d-pilot-repair1",
+    "startedAt": "2026-11-13T16:07:36.541Z",
+    "updatedAt": "2026-11-13T16:11:19.912Z",
+    "sourceSha256AtLoad": "b8eaa578291320eb9603c42cea7372d559fb3c5e149a5bf91aa98454b5b03ad6",
+    "sourceSha256AtEnd": "b8eaa578291320eb9603c42cea7372d559fb3c5e149a5bf91aa98454b5b03ad6",
+    "sourceUnchanged": true,
+    "wallSeconds": 223.69093342899998,
+    "validatedPlayingSeconds": 141.81666666667175,
+    "simulatedReadingSeconds": 57.925385440000014,
+    "simulatedReadingCharactersPerMinute": 2400,
+    "completedMissions": 1,
+    "completedStages": 4,
+    "rescuedAndDelivered": 2,
+    "fieldNotes": 2,
+    "deaths": 1,
+    "retries": 1,
+    "errors": 0,
+    "warnings": 0,
+    "scope": "One first-mission exploration using automated standard Gamepad API input and accelerated simulated reading; it does not establish human reading speed, total playtime, balance or full campaign completion."
+  },
+  "repairedCampaignRun": {
+    "statusAtObservation": "running",
+    "runDirectory": "artifacts/deadcircuit-3d-campaign-repaired",
+    "startedAt": "2026-11-13T16:12:00.293Z",
+    "observedAt": "2026-11-13T16:12:45.549Z",
+    "sourceSha256AtLoad": "b8eaa578291320eb9603c42cea7372d559fb3c5e149a5bf91aa98454b5b03ad6",
+    "scope": "Eighteen-mission run observed in progress; no success or playtime claim."
   }
 }
