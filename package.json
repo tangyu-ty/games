@@ -6,10 +6,11 @@
   "description": "潮汐信使 · 群岛回声 — twelve-chapter nautical story adventure and replayable sailing roguelite",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test --test-concurrency=1 tests/*.test.mjs",
+    "test": "node --test --test-concurrency=1 tests/*.test.mjs deadcircuit/tests/*.test.mjs",
     "build": "node build.mjs",
-    "pretest": "node build.mjs",
-    "test:soak": "node scripts/soak.mjs --hours 10"
+    "pretest": "node build.mjs && node deadcircuit/build.mjs",
+    "test:soak": "node scripts/soak.mjs --hours 10",
+    "build:deadcircuit": "node deadcircuit/build.mjs"
   },
   "engines": {
     "node": ">=18"

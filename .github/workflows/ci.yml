@@ -25,5 +25,5 @@ jobs:
           CHROMIUM_PATH: ''
       - uses: actions/upload-artifact@v4
         with:
-          name: tidekeeper-offline
-          path: dist/tidekeeper.html
+          name: browser-games-offline
+          path: dist/*.html
