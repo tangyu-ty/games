@@ -1,7 +1,7 @@
 # DEAD CIRCUIT architecture and data interfaces
 
 Independent ES module game in `/deadcircuit/`. Do not edit Tidekeeper sources.
-Canvas top-down tactical campaign, 18 genuinely different maps; all art/audio local/procedural.
+WebGL third-person over-the-shoulder tactical campaign, 18 genuinely different maps; all art/audio local/procedural.
 Chinese UI and story. No dependencies at runtime. Keyboard, standard Gamepad, touch.
 
 ## Modules
@@ -10,10 +10,10 @@ Chinese UI and story. No dependencies at runtime. Keyboard, standard Gamepad, to
 - `levels.js` defines the hand-authored environments; `geometry.js` provides exact collision and navigation.
 - `story.js` contains all narrative content and field documents; `audio.js` synthesizes local audio.
 - `armory.js` owns weapon and attachment transactions; `enemies.js` defines roles; `ai.js` implements perception and tactics.
-- `ui.js`, `style.css`, `index.html` and `render.js` present the game.
+- `ui.js`, `style.css`, `index.html`, `input3d.js` and `render3d.js` present the third-person game; `render.js` supplies local interface illustrations.
 - `build.mjs` creates the standalone HTML; `tests/` and `scripts/playtest.mjs` provide controlled regression and natural-input checks.
 
-Coordinate system: world pixels, Y down, 64px tiles. Rectangles `{x,y,w,h}`. Actors have center `{x,y,r}`.
+Coordinate system: world pixels, Y down, 64px tiles. The renderer maps X/Y to 3D X/Z at .02 meters per pixel; player ground navigation uses that plane and projectiles carry a separate height. Rectangles `{x,y,w,h}`. Actors have center `{x,y,r}`.
 
 ## Level interface
 

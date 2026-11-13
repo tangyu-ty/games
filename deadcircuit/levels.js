@@ -6,7 +6,7 @@ const META=[
  ['灰线转运站','被指定的目标','station',4,'交叉月台与穿站侧翼','取回身份钥匙；离开时别沿原路返回。'],
  ['封锁商业街','封锁不是一道门','street',5,'穿店路线与车辆断控','切断装甲路障，查清谁把居民列成了目标。'],
  ['仁济急诊楼','不要把人留在系统里','hospital',6,'双通行网与伤员撤离','恢复救护坡道供电，给无法翻窗的人留一条宽路。'],
- ['北行货运列车','车门外的城市','train',5,'车顶／车厢双路径','在七节车厢中寻找原始记录，切断追兵车厢。'],
+ ['北行货运列车','车门外的城市','train',5,'车外检修道／车厢双路径','在七节车厢中寻找原始记录，切断追兵车厢。'],
  ['第七码头冷库','保存温度，也保存证词','coldstore',6,'阀门蒸汽与冷链选择','改变蒸汽流向，找到未被覆写的芯片与失温幸存者。'],
  ['广告塔顶','第一次说出真相','rooftop',6,'三塔连桥与广播接力','夺回三处发射平台，让全城听见安保协议的原文。'],
  ['四号排洪闸','城市不是战场模型','floodgate',6,'双闸改道与低位救援','手动改变闸室水位，救出被封在下游的工班。'],
@@ -130,7 +130,7 @@ const AUTHORS=[
  optional(l,'conductor','rescue','被困检修员',2040,1340,{flag:'conductorSaved'});
  supplies(l,[[500,1410],[2790,1350],[4470,830]]);
  squad(l,1000,1240,['patrol','patrol','assault'],80);squad(l,1930,770,['walker','runner','walker'],75);squad(l,2720,1260,['shield','radio','patrol'],85);squad(l,3650,760,['walker','climber','walker'],75);squad(l,4500,1270,['assault','sniper','patrol'],85);squad(l,5150,690,['drone','patrol'],70);
- stages(l,[['让列车继续前进','进入第二节车厢，找到独立制动器。',['brake-override']],['越过车顶和车内','选择狭窄车厢或暴露的外侧通道取回记录。',['sealed-log']],['切断追兵','到尾部手动解开联结器，从尾端检修平台撤离。',['uncouple']]]);
+ stages(l,[['让列车继续前进','进入第二节车厢，找到独立制动器。',['brake-override']],['穿过车外和车内','选择狭窄车厢或暴露的外侧通道取回记录。',['sealed-log']],['切断追兵','到尾部手动解开联结器，从尾端检修平台撤离。',['uncouple']]]);
  label(l,'北行 07 / 高架货运',2200,440);return l;
 },
 // 05: long refrigeration racks form alternating loops, not a generic square maze.
@@ -410,8 +410,8 @@ const EXPANSIONS=[
   chain:[['恢复救护宽路','核对名单并启动备用电源，确保每一张担架都有出口。',['backup-power','triage-list']],['把污染当成疾病调查','封存最早样本，接通移动氧气，避免把病人变成靶子。',['isolation-sample','oxygen']],['先把活人带走','担架与护工都需要有人带离，不只取回一份文件。',['stretcher','last-staff']],['给救护车开门','放下转运坡道，再确认救护出口，完成这次交接。',['lift-release','ambulance-gate']]],response:[[1900,1600],[2980,1490],[2440,2460]]
  },
  {
-  tasks:[['roof-access','switch','开放检修车顶攀行口',2010,1390,{effect:{openDoors:['car-access-2','car-access-3']}}],['cargo-seal','evidence','核对货舱封签与记录序号',2770,820,{}],['passenger','rescue','接出藏在尾厢的检修员',3940,1370,{escort:true}],['quarantine-power','power','切断尾厢错误的隔离命令',4310,850,{effect:{openDoors:['car-access-5'],setFlag:{trainQuarantineEnded:true}}}],['tail-signal','relay','发出人工尾部撤离信号',5260,1290,{requires:['uncouple']}]],
-  chain:[['列车不是封闭容器','解除制动，开放车顶检修口形成双层路线。',['brake-override','roof-access']],['取证需要一份封签','将独立货运记录与货舱封签相互核对。',['sealed-log','cargo-seal']],['把隔离命令留在车上','接回检修员，切断尾厢被错误标记的隔离电源。',['passenger','quarantine-power']],['让追兵留在后面','手动切断联结器，向下一站发送人工撤离信号。',['uncouple','tail-signal']]],response:[[2240,1280],[3700,720],[4930,1260]]
+  tasks:[['roof-access','switch','开放车外检修通路',2010,1390,{effect:{openDoors:['car-access-2','car-access-3']}}],['cargo-seal','evidence','核对货舱封签与记录序号',2770,820,{}],['passenger','rescue','接出藏在尾厢的检修员',3940,1370,{escort:true}],['quarantine-power','power','切断尾厢错误的隔离命令',4310,850,{effect:{openDoors:['car-access-5'],setFlag:{trainQuarantineEnded:true}}}],['tail-signal','relay','发出人工尾部撤离信号',5260,1290,{requires:['uncouple']}]],
+  chain:[['列车不是封闭容器','解除制动，开放车外检修口形成两条路线。',['brake-override','roof-access']],['取证需要一份封签','将独立货运记录与货舱封签相互核对。',['sealed-log','cargo-seal']],['把隔离命令留在车上','接回检修员，切断尾厢被错误标记的隔离电源。',['passenger','quarantine-power']],['让追兵留在后面','手动切断联结器，向下一站发送人工撤离信号。',['uncouple','tail-signal']]],response:[[2240,1280],[3700,720],[4930,1260]]
  },
  {
   tasks:[['pressure-return','switch','释放高压回流管',3650,1510,{effect:{disableHazards:['steam-east']}}],['batch-confirm','evidence','用运输底单核对芯片批次',610,520,{}],['medical-pack','crate','装好检修员需要的保温医疗包',3470,2810,{reward:'medical'}],['release-power','power','让冷库出口脱离远程封锁',1850,3110,{effect:{setFlag:{coldExitIndependent:true}}}],['cold-exit','gate','向码头地勤确认安全接驳',3880,820,{requires:['cold-patient']}]],

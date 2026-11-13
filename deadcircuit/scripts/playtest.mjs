@@ -9,11 +9,11 @@ import {fileURLToPath} from 'node:url';
 import {performance} from 'node:perf_hooks';
 import {chromium} from 'playwright';
 import {browserPath} from '../../scripts/browser.mjs';
-import {findPath,pointWalkable,segmentRect,distance,clamp,lineOfSight} from '../geometry.js';
+import {findPath,pointWalkable,segmentRect,distance,clamp,lineOfSight,segmentRectTime} from '../geometry.js';
 
 const gameRoot=fileURLToPath(new URL('../',import.meta.url));
 const repoRoot=path.dirname(gameRoot.replace(/\/$/,''));
-const args=process.argv.slice(2),options={missions:3,readingCpm:700,output:'artifacts/dc-natural',maxMinutes:240,difficulty:'standard',headless:true,explore:false};
+const args=process.argv.slice(2),options={missions:3,readingCpm:700,output:'artifacts/dc-natural',maxMinutes:240,difficulty:'standard',headless:true,explore:false,diagnostic3D:false};
 for(let i=0;i<args.length;i++){
  const key=args[i];
  if(key==='--missions')options.missions=Number(args[++i]);
@@ -23,8 +23,9 @@ for(let i=0;i<args.length;i++){
  else if(key==='--difficulty')options.difficulty=args[++i];
  else if(key==='--headed')options.headless=false;
  else if(key==='--explore')options.explore=true;
+ else if(key==='--diagnostic-3d')options.diagnostic3D=true;
  else if(key==='--help'){
-  console.log('node deadcircuit/scripts/playtest.mjs [--missions 1..18] [--reading-cpm 700] [--output artifacts/dc-natural] [--max-minutes 240] [--difficulty standard] [--explore] [--headed]');process.exit(0);
+  console.log('node deadcircuit/scripts/playtest.mjs [--missions 1..18] [--reading-cpm 700] [--output artifacts/dc-natural] [--max-minutes 240] [--difficulty standard] [--explore] [--diagnostic-3d] [--headed]');process.exit(0);
  }else throw Error('Unknown argument '+key);
 }
 if(!Number.isInteger(options.missions)||options.missions<1||options.missions>18)throw Error('--missions must be an integer from 1 to 18');
@@ -37,20 +38,21 @@ if(existsSync(summaryPath))throw Error('Output already contains a run; choose a 
 
 function productHash(){
  const hash=createHash('sha256');
- for(const filename of readdirSync(gameRoot).filter(name=>/\.(?:js|css|html)$/.test(name)).sort()){
+ const files=[...readdirSync(gameRoot).filter(name=>/\.(?:js|css|html)$/.test(name)),'vendor/three.js'].sort();
+ for(const filename of files){
   hash.update(filename+'\0');hash.update(readFileSync(path.join(gameRoot,filename)));hash.update('\0');
  }
  return hash.digest('hex');
 }
 const start=performance.now(),sourceHash=productHash(),method='Fresh campaign operated only through standard Gamepad axes/buttons and visible DOM controls. The pilot reads exposed world state for navigation and aiming. Game simulation advances only through the normal requestAnimationFrame loop; no stats, mission state, actor positions, health, clocks or update methods are changed. Reading delays are explicit simulated reading, not human reading.';
-const summary={schemaVersion:1,status:'running',startedAt:new Date().toISOString(),updatedAt:null,pid:process.pid,options,method,wallSeconds:0,validatedPlayingSeconds:0,dialoguePanelWallSeconds:0,readingCharacters:0,readingPanels:0,completedMissions:[],observedStages:[],completedStages:[],completedObjectives:[],choices:[],fieldNotes:[],deaths:0,retries:0,errors:[],warnings:[],missionLog:[],inputSamples:0,sourceSha256AtLoad:sourceHash,sourceSha256Now:sourceHash,sourceUnchanged:true,campaignWon:false,coverageComplete:false,lastSample:null};
+const summary={schemaVersion:1,status:'running',startedAt:new Date().toISOString(),updatedAt:null,pid:process.pid,options,method,wallSeconds:0,validatedPlayingSeconds:0,dialoguePanelWallSeconds:0,readingCharacters:0,readingPanels:0,completedMissions:[],observedStages:[],completedStages:[],completedObjectives:[],choices:[],fieldNotes:[],deaths:0,retries:0,errors:[],warnings:[],missionLog:[],inputSamples:0,diagnostic3D:{requested:options.diagnostic3D,is3DObserved:false,movementPixels:0,yawTravel:0,pitchTravel:0,playerShots:0,ballisticPlayerHitObserved:false,enemyHpReductionObservedIncludingCrossfire:0,doorsOpenedByPad:[],completed:false},sourceSha256AtLoad:sourceHash,sourceSha256Now:sourceHash,sourceUnchanged:true,campaignWon:false,coverageComplete:false,lastSample:null};
 function event(type,data={}){const record={at:new Date().toISOString(),...data,type,wallSeconds:(performance.now()-start)/1000};if(Object.hasOwn(data,'wallSeconds'))record.durationSeconds=data.wallSeconds;appendFileSync(eventsPath,JSON.stringify(record)+'\n');}
 function updateHash(){summary.sourceSha256Now=productHash();summary.sourceUnchanged=summary.sourceSha256Now===sourceHash;if(!summary.sourceUnchanged&&!summary.warnings.some(w=>w.code==='SOURCE_CHANGED')){summary.warnings.push({code:'SOURCE_CHANGED',message:'Product sources changed during the run; this run cannot validate a frozen release.'});event('warning',summary.warnings.at(-1));}}
 function saveSummary(){summary.updatedAt=new Date().toISOString();summary.wallSeconds=(performance.now()-start)/1000;const temporary=summaryPath+'.tmp';writeFileSync(temporary,JSON.stringify(summary,null,2)+'\n');renameSync(temporary,summaryPath);}
 function fault(code,message,extra={}){const item={code,message,...extra};summary.errors.push(item);event('error',item);}
 event('start',{options,sourceHash,method});saveSummary();
 
-let server,browser,context,page,base,stopped=false;
+let server,browser,context,page,base,stopped=false,lastPadInput={axes:[0,0,0,0],buttons:[]};
 process.on('SIGINT',()=>{stopped=true;});process.on('SIGTERM',()=>{stopped=true;});
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function startServer(){
@@ -66,21 +68,28 @@ async function readState(){
  return page.evaluate(()=>{
   const g=window.__dc;if(!g)return null;
   const p=g.player,l=g.level,c=g.campaign,d=g.dialogueState;
+  const render=g.renderer,scale=render?.unitScale||.02,is3D=!!render?.is3D;const actorBounds=actor=>g.heightBounds3D?.(actor)||(actor?.type==='drone'?{bottom:1.5,top:2.05}:{bottom:0,top:({brute:2.4,warden:2.5,heavy:1.95,shield:1.85,walker:1.65,runner:1.5,climber:1.45,spitter:1.8,turret:1.55}[actor?.type]||1.75)*(actor===p&&p?.stance==='crouch'?.72:1)});
+  const project=point=>{try{const q=render?.projectPoint?.(point);return q?{x:q.x,y:q.y,ndcX:q.ndcX,ndcY:q.ndcY,inFront:q.inFront,visible:q.visible}:null;}catch{return null;}};
+  const rect=(r,kind)=>({...r,height3D:g.solidHeight3D?.(r,kind)||(kind==='cover'?(r.low===false?2.3:1.05):3.2)});
+  const camera=render?.cameraData,threeCamera=render?.camera;let cameraData=camera?{...camera,height:camera.heightMeters??camera.height,viewportWidth:camera.viewportWidth??innerWidth,viewportHeight:camera.viewportHeight??innerHeight,aspect:threeCamera?.aspect||innerWidth/innerHeight}:null;if(!cameraData&&threeCamera?.isPerspectiveCamera){const m=threeCamera.matrixWorld?.elements;cameraData={x:threeCamera.position.x/scale,y:threeCamera.position.z/scale,height:threeCamera.position.y,dirX:-(m?.[8]||0),dirY:-(m?.[10]||0),dirHeight:-(m?.[9]||0),fov:threeCamera.fov,width:innerWidth,height:innerHeight};}
   const take=(object,keys)=>Object.fromEntries(keys.filter(k=>object?.[k]!==undefined).map(k=>[k,object[k]]));
   return{
    mode:g.mode,mission:c.mission,stage:c.stage,phase:c.phase,sceneIndex:c.sceneIndex,completed:[...c.completed],choices:{...c.choices},fieldNotes:(c.fieldNotes||[]).map(n=>({id:n.id,mission:n.mission,title:n.title})),deaths:c.deaths,totalPlay:c.totalPlay,time:g.time,elapsed:g.elapsed,
+   is3D,unitScale:scale,cameraData,inputLook:{yawRate:2.4*Math.max(.25,Math.min(3,g.settings.lookSensitivity||1)),pitchRate:1.65*Math.max(.25,Math.min(3,g.settings.lookSensitivity||1)),adsMultiplier:.55,deadzone:g.settings.deadzone??.18,pitchLimit:1.08,invertY:!!g.settings.invertY},muzzle3D:g.muzzle3D?{x:g.muzzle3D.x,y:g.muzzle3D.y,height:g.muzzle3D.height}:null,
    difficulty:g.settings.difficulty,extractionReady:g.extractionReady,objective:g.objectiveText,interactionHint:g.interactionHint||'',interactionProgress:g.interactionProgress||0,
    completedObjects:[...(g.completedObjectIds||[])],missionKills:g.missionKills,missionShots:g.missionShots||0,stageStartKills:g.stageStartKills||0,
-   player:p?take(p,['x','y','r','hp','maxHp','armor','maxArmor','stamina','angle','stance','coverId','action','weaponIndex','slideTime','throwCooldown','carrying']):null,
+   player:p?take(p,['x','y','r','hp','maxHp','armor','maxArmor','stamina','angle','pitch','stance','coverId','action','weaponIndex','slideTime','throwCooldown','carrying']):null,
    weapon:p?g.weaponStats():null,weaponId:p?g.profile.loadout[p.weaponIndex||0]:null,ammo:p?{...g.profile.ammo[g.profile.loadout[p.weaponIndex||0]]}:null,
    profile:{loadout:[...g.profile.loadout],ownedWeapons:[...g.profile.ownedWeapons],ownedAttachments:{...g.profile.ownedAttachments},fittings:JSON.parse(JSON.stringify(g.profile.fittings)),ammo:JSON.parse(JSON.stringify(g.profile.ammo)),medkits:g.profile.medkits,grenades:{...g.profile.grenades}},
    dialogueText:document.querySelector('#dialogueText')?.textContent||'',choiceText:document.querySelector('.choice-prompt')?.textContent||'',dialogueLines:d?.lines?.length||0,hasChoice:!!d?.choice,
-   level:l?{id:l.id,name:l.name,width:l.width,height:l.height,spawn:{...l.spawn},exit:{...l.exit},walls:l.walls.map(w=>take(w,['id','x','y','w','h','active','hp','material','destroyed'])),covers:l.covers.map(w=>take(w,['id','x','y','w','h','active','hp','material','low','destroyed'])),doors:l.doors.map(w=>take(w,['id','x','y','w','h','open','active','hp','locked'])),floorZones:l.floorZones.map(z=>take(z,['id','type','x','y','w','h','active'])),objects:l.objects.map(o=>take(o,['id','x','y','r','type','name','stage','interaction','optional','active','completed','following','delivered','stopped','hp','maxHp','requires','fieldNote'])),stages:l.stages.map(s=>take(s,['id','title','targets','requiredKills']))}:null,
-   enemies:g.enemies.filter(e=>e.hp>0&&!e.dead&&!e.disabled).map(e=>({...take(e,['id','type','faction','x','y','r','hp','maxHp','angle','state','range','damage','speed','ammo','reloadTime','stunTime','telegraph']),targetingPlayer:e.ai?.target===p,visibleToPlayer:p?g.hasSight(p,e):false})),
-   bullets:g.bullets.filter(b=>b.life>0&&b.faction!=='player').map(b=>take(b,['x','y','vx','vy','r','faction','projectile'])),
+   level:l?{id:l.id,name:l.name,width:l.width,height:l.height,spawn:{...l.spawn},exit:{...l.exit},walls:l.walls.map(w=>rect(take(w,['id','x','y','w','h','active','hp','material','destroyed','height3D']),'wall')),covers:l.covers.map(w=>rect(take(w,['id','x','y','w','h','active','hp','material','low','destroyed','height3D']),'cover')),doors:l.doors.map(w=>rect(take(w,['id','x','y','w','h','open','active','hp','locked','height3D']),'door')),floorZones:l.floorZones.map(z=>take(z,['id','type','x','y','w','h','active'])),objects:l.objects.map(o=>take(o,['id','x','y','r','type','name','stage','interaction','optional','active','completed','following','delivered','stopped','hp','maxHp','requires','fieldNote'])),stages:l.stages.map(s=>take(s,['id','title','targets','requiredKills']))}:null,
+   enemies:g.enemies.filter(e=>e.hp>0&&!e.dead&&!e.disabled).map(e=>({...take(e,['id','type','faction','x','y','r','hp','maxHp','angle','state','range','damage','speed','ammo','reloadTime','stunTime','telegraph']),targetingPlayer:e.ai?.target===p,visibleToPlayer:p?g.hasSight(p,e):false,aimHeight:(actorBounds(e).bottom+actorBounds(e).top)*.5,projection:project({x:e.x,y:e.y,height:(actorBounds(e).bottom+actorBounds(e).top)*.5})})),
+   bullets:g.bullets.filter(b=>b.life>0&&b.faction!=='player').map(b=>take(b,['x','y','vx','vy','r','faction','projectile','height','vz','ballistic3D'])),
+   ballisticPlayerHitEffects:g.effects.filter(e=>e.type==='hit'&&Number.isFinite(e.height)).map(e=>take(e,['x','y','height','life'])),
    effects:g.effects.filter(e=>['smoke','acid'].includes(e.type)&&e.life>0).map(e=>take(e,['x','y','radius','life','type'])),
+   interactionTarget:g.interactionTarget?{id:g.interactionTarget.id,type:g.interactionTarget.type,x:g.interactionTarget.x,y:g.interactionTarget.y}:null,
    result:g.lastResult?take(g.lastResult,['mission','seconds','kills','optional']):null,
-   numbersValid:!p||[p.x,p.y,p.hp,p.armor,p.stamina,...g.enemies.flatMap(e=>[e.x,e.y,e.hp])].every(Number.isFinite)
+   numbersValid:!p||[p.x,p.y,p.hp,p.armor,p.stamina,...(is3D?[p.pitch??0]:[]),...g.enemies.flatMap(e=>[e.x,e.y,e.hp])].every(Number.isFinite)
   };
  });
 }
@@ -88,17 +97,32 @@ async function readState(){
 const neutral={axes:[0,0,0,0],buttons:[]};
 async function sendPad(controls=neutral){
  await page.evaluate(input=>{window.__dcNaturalPad.axes=input.axes;window.__dcNaturalPad.buttons=input.buttons;},controls);
- summary.inputSamples++;
+ lastPadInput={axes:[...controls.axes],buttons:[...controls.buttons]};summary.inputSamples++;
 }
-const inverseAxis=value=>Math.abs(value)<.025?0:Math.sign(value)*(.18+Math.min(1,Math.abs(value))*.82);
-function padFor(moveVector,aimVector,buttons){return{axes:[inverseAxis(moveVector.x),inverseAxis(moveVector.y),inverseAxis(aimVector.x),inverseAxis(aimVector.y)],buttons:[...new Set(buttons)]};}
+const inverseAxis=(value,deadzone=.18)=>Math.abs(value)<.004?0:Math.sign(value)*(deadzone+Math.min(1,Math.abs(value))*(1-deadzone));
+function padFor(state,moveVector,aimVector,buttons,aimTarget=null){
+ if(!state.is3D)return{axes:[inverseAxis(moveVector.x),inverseAxis(moveVector.y),inverseAxis(aimVector.x),inverseAxis(aimVector.y)],buttons:[...new Set(buttons)]};
+ const p=state.player,yaw=p.angle||0,right={x:-Math.sin(yaw),y:Math.cos(yaw)},forward={x:Math.cos(yaw),y:Math.sin(yaw)};
+ const localX=moveVector.x*right.x+moveVector.y*right.y,localY=-(moveVector.x*forward.x+moveVector.y*forward.y);
+ let yawError=angleDifference(Math.atan2(aimVector.y,aimVector.x),yaw),desiredPitch=-.035,pitchError=desiredPitch-(p.pitch||0),projected=false;
+ const camera=Number.isFinite(state.cameraData?.x)&&Number.isFinite(state.cameraData?.height)?state.cameraData:null,point=aimTarget;
+ if(point&&camera){const scale=state.unitScale||.02,targetYaw=Math.atan2(point.y-camera.y,point.x-camera.x),cameraYaw=Math.atan2(camera.dirY,camera.dirX),range=Math.hypot(point.x-camera.x,point.y-camera.y)*scale;desiredPitch=Math.atan2((point.aimHeight??.9)-camera.height,Math.max(.01,range));yawError=angleDifference(targetYaw,cameraYaw);pitchError=desiredPitch-Math.asin(clamp(camera.dirHeight||0,-1,1));
+  if(point.projection?.inFront!==false&&Number.isFinite(point.projection?.ndcX)&&Number.isFinite(point.projection?.ndcY)){const tangent=Math.tan((camera.fov||65)*Math.PI/360),aspect=camera.aspect||(camera.viewportWidth||1440)/(camera.viewportHeight||900);yawError=Math.atan(point.projection.ndcX*tangent*aspect);pitchError=Math.atan(point.projection.ndcY*tangent);projected=true;}
+ }else if(point){const range=Math.hypot(point.x-p.x,point.y-p.y)*(state.unitScale||.02),muzzle=state.muzzle3D?.height??(p.stance==='crouch'?.972:1.35);desiredPitch=Math.atan2((point.aimHeight??.9)-muzzle,Math.max(.01,range));pitchError=desiredPitch-(p.pitch||0);}
+ const chosen=[...new Set(buttons)];if(Math.abs(yawError)>.55){const ads=chosen.indexOf(6);if(ads>=0)chosen.splice(ads,1);}
+ const multiplier=chosen.includes(6)?.55:1,yawRate=(state.inputLook?.yawRate||2.4)*multiplier,pitchRate=(state.inputLook?.pitchRate||1.65)*multiplier;
+ const yawControl=Math.abs(yawError)<.004?0:clamp(yawError*4.6/yawRate,-1,1),pitchControl=Math.abs(pitchError)<.003?0:clamp(-pitchError*4.2/pitchRate*(state.inputLook?.invertY?-1:1),-1,1);
+ if(Math.abs(yawError)>.085||Math.abs(pitchError)>.075||point?.projection?.inFront===false){const fire=chosen.indexOf(7);if(fire>=0)chosen.splice(fire,1);}
+ state.pilotAim={targetId:point?.id||null,yawError,pitchError,desiredPitch,projected,controls:{localX,localY,yawControl,pitchControl}};
+ const dz=state.inputLook?.deadzone??.18;return{axes:[inverseAxis(localX,dz),inverseAxis(localY,dz),inverseAxis(yawControl,dz),inverseAxis(pitchControl,dz)],buttons:chosen};
+}
 const unit=(x,y)=>{const len=Math.hypot(x,y);return len>0?{x:x/len,y:y/len}:{x:0,y:0};};
 const normalize=vector=>{const len=Math.hypot(vector.x,vector.y);return len>1?{x:vector.x/len,y:vector.y/len}:vector;};
 const angleDifference=(a,b)=>Math.atan2(Math.sin(a-b),Math.cos(a-b));
 function lineOfFire(state,enemy){
- const p=state.player,a={x:p.x+Math.cos(Math.atan2(enemy.y-p.y,enemy.x-p.x))*24,y:p.y+Math.sin(Math.atan2(enemy.y-p.y,enemy.x-p.x))*24};
- const obstacles=[...state.level.walls.filter(w=>w.active!==false&&!w.destroyed&&w.hp!==0),...state.level.doors.filter(d=>!d.open&&d.active!==false),...state.level.covers.filter(c=>c.active!==false&&!c.destroyed&&c.hp!==0&&c.id!==p.coverId)];
- return !obstacles.some(rect=>segmentRect(a,enemy,rect,1));
+ const p=state.player,angle=Math.atan2(enemy.y-p.y,enemy.x-p.x),a=state.is3D&&state.muzzle3D?state.muzzle3D:{x:p.x+Math.cos(angle)*24,y:p.y+Math.sin(angle)*24};
+ const obstacles=[...state.level.walls.filter(w=>w.active!==false&&!w.destroyed&&w.hp!==0),...state.level.doors.filter(d=>!d.open&&d.active!==false),...state.level.covers.filter(c=>c.active!==false&&!c.destroyed&&c.hp!==0&&(state.is3D||c.id!==p.coverId))];
+ return !obstacles.some(rect=>{if(!segmentRect(a,enemy,rect,1))return false;if(!state.is3D)return true;const entry=segmentRectTime(a,enemy,rect,1),exit=1-(segmentRectTime(enemy,a,rect,1)??0),originHeight=state.muzzle3D?.height??(p.stance==='crouch'?.972:1.35),targetHeight=enemy.aimHeight??.9,z1=originHeight+(targetHeight-originHeight)*(entry??0),z2=originHeight+(targetHeight-originHeight)*exit;return Math.min(z1,z2)<(rect.height3D??(rect.low===false?2.3:1.05))+.02;});
 }
 
 class Pilot{
@@ -160,6 +184,7 @@ class Pilot{
  }
  chooseGoal(state){
   const p=state.player,l=state.level,stage=l.stages[state.stage],completed=new Set(state.completedObjects);
+  if(options.diagnostic3D&&!summary.diagnostic3D.doorsOpenedByPad.length){const door=l.doors.filter(d=>!d.open&&d.active!==false&&d.hp!==0).map(d=>({...d,x:d.x+d.w/2,y:d.y+d.h/2,id:'diagnostic-door:'+d.id,type:'door',diagnosticDoorId:d.id,interaction:.3})).sort((a,b)=>distance(p,a)-distance(p,b))[0];if(door)return door;}
   const followers=l.objects.filter(o=>o.following&&!o.delivered&&o.hp>0);
   const behind=followers.filter(o=>distance(o,p)>480).sort((a,b)=>distance(b,p)-distance(a,p))[0];
   if(behind)return{...behind,id:'escort-wait:'+behind.id,waitForEscort:true};
@@ -185,7 +210,7 @@ class Pilot{
   if(!p||!l)return neutral;
   if(this.lastPosition){const moved=distance(p,this.lastPosition);this.stuck=moved<2?this.stuck+.1:Math.max(0,this.stuck-.3);}this.lastPosition={x:p.x,y:p.y};
   const goal=this.chooseGoal(state);this.lastGoal=goal?{id:goal.id,x:goal.x,y:goal.y}:null;
-  let waypoint=goal?this.plan(state,goal,now):p,move=unit(waypoint.x-p.x,waypoint.y-p.y),aim={...move};
+  let waypoint=goal?this.plan(state,goal,now):p,move=unit(waypoint.x-p.x,waypoint.y-p.y),aim={...move},aimPoint=goal?{...goal,aimHeight:['terminal','switch','power','relay'].includes(goal.type)?.9:.25}:null;
   const goalDistance=goal?distance(p,goal):Infinity;
   if(goalDistance<(goal?.waitForEscort?170:62)&&lineOfSight(p,goal,l))move={x:0,y:0};
   const nearEnemies=state.enemies.filter(e=>e.visibleToPlayer&&distance(p,e)<Math.min(1050,(state.weapon?.range||650)+180));
@@ -205,14 +230,14 @@ class Pilot{
    const exits=[{x:hot.x-35,y:p.y},{x:hot.x+hot.w+35,y:p.y},{x:p.x,y:hot.y-35},{x:p.x,y:hot.y+hot.h+35}].filter(point=>pointWalkable(point,l,18));
    const exit=exits.sort((a,b)=>distance(p,a)-distance(p,b))[0];if(exit)hazardEscape=unit(exit.x-p.x,exit.y-p.y);
   }
-  if(action==='heal'&&!hazardEscape)return padFor({x:0,y:0},{x:Math.cos(p.angle),y:Math.sin(p.angle)},[]);
+  if(action==='heal'&&!hazardEscape)return padFor(state,{x:0,y:0},{x:Math.cos(p.angle),y:Math.sin(p.angle)},[]);
   const closeThreat=prioritized.some(e=>e.d<220&&!e.stunTime);
   if(p.hp<58&&state.profile.medkits>0&&!action&&!closeThreat&&!hazardEscape&&this.pulse('heal',now,3.5)){
-   event('heal_input',{mission:state.mission,stage:state.stage,hp:p.hp});return padFor({x:0,y:0},{x:Math.cos(p.angle),y:Math.sin(p.angle)},[12]);
+   event('heal_input',{mission:state.mission,stage:state.stage,hp:p.hp});return padFor(state,{x:0,y:0},{x:Math.cos(p.angle),y:Math.sin(p.angle)},[12]);
   }
   let firing=false;
   if(threat){
-   const predict=threat.faction==='infected'&&threat.type!=='spitter'?.04:0;
+   aimPoint=threat;const predict=threat.faction==='infected'&&threat.type!=='spitter'?.04:0;
    aim=unit(threat.x+Math.cos(threat.angle||0)*(threat.speed||0)*predict-p.x,threat.y+Math.sin(threat.angle||0)*(threat.speed||0)*predict-p.y);
    const inRange=threat.d<(state.weapon?.range||650)*.94;
    if(threat.shootable&&inRange&&action!=='reload'){
@@ -255,7 +280,7 @@ class Pilot{
   if(followerDistance>240&&!goal?.waitForEscort){move={x:move.x*.62,y:move.y*.62};const sprint=buttons.indexOf(10);if(sprint>=0)buttons.splice(sprint,1);}
   if(hazardEscape){move=hazardEscape;buttons.push(10);if(p.stamina>=30&&this.pulse('hazard-dodge',now,1.5))buttons.push(1);}
   if(this.stuck>3&&!p.action&&this.pulse('unstick',now,2)){buttons.push(1);this.routeAt=0;this.dodgeSide*=-1;move=normalize({x:move.x-aim.y*.5*this.dodgeSide,y:move.y+aim.x*.5*this.dodgeSide});event('navigation_replan',{mission:state.mission,stage:state.stage,x:p.x,y:p.y,goal:this.lastGoal});}
-  return padFor(move,aim,buttons);
+  return padFor(state,move,aim,buttons,aimPoint);
  }
 }
 
@@ -276,7 +301,7 @@ async function prepareArmory(state){
 async function run(){
  base=await startServer();
  browser=await chromium.launch({executablePath:browserPath(chromium),headless:options.headless,args:['--no-sandbox','--disable-dev-shm-usage','--disable-background-timer-throttling','--disable-renderer-backgrounding']});
- context=await browser.newContext({viewport:{width:1440,height:900}});
+ context=await browser.newContext({viewport:options.diagnostic3D?{width:1100,height:720}:{width:1440,height:900},deviceScaleFactor:1});
  await context.addInitScript(()=>{
   window.__dcNaturalPad={axes:[0,0,0,0],buttons:[]};
   Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>{const input=window.__dcNaturalPad;return[{id:'DEAD CIRCUIT natural-input standard controller',index:0,connected:true,mapping:'standard',timestamp:performance.now(),axes:[...input.axes],buttons:Array.from({length:17},(_,i)=>({pressed:input.buttons.includes(i),touched:input.buttons.includes(i),value:input.buttons.includes(i)?1:0}))}];}});
@@ -290,7 +315,7 @@ async function run(){
  await page.locator('#newGameBtn').click();
  const pilot=new Pilot();let previous=null,previousAt=performance.now(),readingKey='',readingUntil=0,lastSave=0,lastHash=0,lastProgress=performance.now(),lastMode='',preparedMission=-1,lastSummaryMission=-1;
  const seenStages=new Set(),completedStageKeys=new Set(),seenCompleted=new Set(),seenChoices=new Set(),seenObjectives=new Set(),missionStarts=new Map(),stageStarts=new Map(),retryMap=new Map(),missionMetrics=new Map();
- let successful=false;
+ let successful=false,diagnosticSuccess=false;
  while(!stopped){
   const now=performance.now(),seconds=(now-start)/1000;
   if(seconds>options.maxMinutes*60)throw Error('Natural playtest exceeded its configured wall-time limit');
@@ -302,6 +327,15 @@ async function run(){
   if(previous?.mode==='playing'&&state.totalPlay>=previous.totalPlay){const increment=state.totalPlay-previous.totalPlay;if(increment<=Math.max(2,delta*1.5)){summary.validatedPlayingSeconds+=increment;missionMetrics.get(previous.mission).activePlaySeconds+=increment;}else throw Error('Game-time discontinuity cannot be credited as natural play');}
   if(previous?.mode==='dialogue'&&previous.dialogueText){summary.dialoguePanelWallSeconds+=delta;missionMetrics.get(previous.mission).simulatedReadingSeconds+=delta;}
   const currentMissionValid=state.level?.id===state.mission&&!!state.player;
+  if(options.diagnostic3D&&state.mode==='playing'&&!state.is3D)throw Error('3D diagnostic requires the actual third-person 3D renderer and input.');
+  if(state.is3D){summary.diagnostic3D.is3DObserved=true;if(state.ballisticPlayerHitEffects.length)summary.diagnostic3D.ballisticPlayerHitObserved=true;}
+  if(currentMissionValid&&previous?.mode==='playing'&&state.mode==='playing'&&previous.mission===state.mission&&previous.player){
+   const d=summary.diagnostic3D,moved=distance(state.player,previous.player);if(moved<200)d.movementPixels+=moved;
+   d.yawTravel+=Math.abs(angleDifference(state.player.angle||0,previous.player.angle||0));d.pitchTravel+=Math.abs((state.player.pitch||0)-(previous.player.pitch||0));d.playerShots+=Math.max(0,state.missionShots-previous.missionShots);
+   const priorEnemies=new Map(previous.enemies.map(e=>[e.id,e]));for(const e of state.enemies){const before=priorEnemies.get(e.id);if(before)d.enemyHpReductionObservedIncludingCrossfire+=Math.max(0,before.hp-e.hp);}
+   const oldDoors=new Map((previous.level?.doors||[]).map(x=>[x.id,x]));for(const door of state.level.doors){const old=oldDoors.get(door.id);if(old&&!old.open&&door.open&&lastPadInput.buttons.includes(0)&&distance(state.player,{x:door.x+door.w/2,y:door.y+door.h/2})<190&&!d.doorsOpenedByPad.includes(door.id)){d.doorsOpenedByPad.push(door.id);event('diagnostic_door_opened',{mission:state.mission,door:door.id,position:{x:state.player.x,y:state.player.y},inputButtons:lastPadInput.buttons});}}
+  }
+  if(options.diagnostic3D){const d=summary.diagnostic3D;if(d.is3DObserved&&d.movementPixels>=100&&d.yawTravel>=.4&&d.pitchTravel>=.025&&d.playerShots>=3&&d.ballisticPlayerHitObserved&&d.doorsOpenedByPad.length){d.completed=true;diagnosticSuccess=true;event('diagnostic_3d_complete',{...d,completedMissions:summary.completedMissions.length,note:'Input/first-level smoke only; no full-campaign or duration claim.'});break;}}
   if(currentMissionValid){metrics.minHp=Math.min(metrics.minHp,state.player.hp);metrics.minArmor=Math.min(metrics.minArmor,state.player.armor);}
   if(currentMissionValid&&previous?.level?.id===state.mission&&previous.mission===state.mission){
    metrics.playerShots+=Math.max(0,state.missionShots-previous.missionShots);
@@ -313,7 +347,7 @@ async function run(){
   summary.fieldNotes=state.fieldNotes;metrics.fieldNotes=state.fieldNotes.filter(n=>n.mission===state.mission).map(n=>n.id);
   if(!state.numbersValid)throw Error('Game contains a nonfinite actor position or health');
   summary.deaths=state.deaths;summary.campaignWon=state.phase==='won';
-  summary.lastSample={mode:state.mode,mission:state.mission,stage:state.stage,phase:state.phase,sceneIndex:state.sceneIndex,elapsed:state.elapsed,totalPlay:state.totalPlay,hp:state.player?.hp,armor:state.player?.armor,action:state.player?.action,medkits:state.profile.medkits,weapon:state.weaponId,ammo:state.ammo,objective:state.objective,interactionHint:state.interactionHint,player:state.player?{x:state.player.x,y:state.player.y}:null,enemies:state.enemies.length,followers:state.level?.objects.filter(o=>o.following&&!o.delivered).map(o=>({id:o.id,x:o.x,y:o.y,hp:o.hp})),hazards:state.effects.filter(e=>e.type==='acid').map(e=>({x:e.x,y:e.y,r:e.radius})),completedObjects:state.completedObjects,pilotGoal:pilot.lastGoal,currentMissionMetrics:metrics};
+  summary.lastSample={is3D:state.is3D,cameraData:state.cameraData,pitch:state.player?.pitch,yaw:state.player?.angle,pilotAim:state.pilotAim||null,muzzle3D:state.muzzle3D,mode:state.mode,mission:state.mission,stage:state.stage,phase:state.phase,sceneIndex:state.sceneIndex,elapsed:state.elapsed,totalPlay:state.totalPlay,hp:state.player?.hp,armor:state.player?.armor,action:state.player?.action,medkits:state.profile.medkits,weapon:state.weaponId,ammo:state.ammo,objective:state.objective,interactionHint:state.interactionHint,player:state.player?{x:state.player.x,y:state.player.y}:null,enemies:state.enemies.length,followers:state.level?.objects.filter(o=>o.following&&!o.delivered).map(o=>({id:o.id,x:o.x,y:o.y,hp:o.hp})),hazards:state.effects.filter(e=>e.type==='acid').map(e=>({x:e.x,y:e.y,r:e.radius})),completedObjects:state.completedObjects,pilotGoal:pilot.lastGoal,currentMissionMetrics:metrics};
   if(state.mode!==lastMode){event('mode',{mode:state.mode,mission:state.mission,stage:state.stage,phase:state.phase});lastMode=state.mode;}
   if(state.mode==='playing'){
    const stageKey=state.mission+':'+state.stage;
@@ -340,7 +374,7 @@ async function run(){
   if(now-lastHash>30000){updateHash();lastHash=now;}
   if(state.mode==='playing'&&now-lastProgress>10*60*1000)throw Error('No task progress for ten minutes; natural pilot may be stuck');
   if(state.mode==='playing'){
-   await sendPad(pilot.control(state,seconds));readingKey='';
+   const controls=pilot.control(state,seconds);await sendPad(controls);summary.lastSample.pilotAim=state.pilotAim||null;summary.lastSample.lastPadInput=controls;readingKey='';
   }else{
    await sendPad();
    if(state.mode==='dialogue'){
@@ -353,7 +387,7 @@ async function run(){
     }
     if(now>=readingUntil){
      if(state.hasChoice){const index=state.mission%2;if(!await clickIfVisible('#choice-'+index))throw Error('Expected choice control is missing');event('choice_input',{mission:state.mission,choice:index});}
-     else if(!await clickIfVisible('#dialogueNext'))throw Error('Expected dialogue-next control is missing');
+     else{if(!await page.locator('#dialogueNext').isVisible())throw Error('Expected dialogue-next control is missing');await page.keyboard.press('Enter');}
     }
    }else if(state.mode==='briefing'){
     readingKey='';
@@ -377,16 +411,16 @@ async function run(){
    }else throw Error('Unexpected game mode '+state.mode);
   }
   previous=state;previousAt=now;
-  await wait(100);
+  await wait(state.is3D?60:100);
  }
  await sendPad();updateHash();
  summary.coverageComplete=successful&&summary.completedMissions.length===options.missions&&summary.observedStages.length===summary.completedStages.length&&(options.missions<18||summary.campaignWon);
  if(successful&&!summary.coverageComplete)throw Error('Completion coverage is incomplete');
  if(!summary.sourceUnchanged)throw Error('Product sources changed during this run; not a frozen-build completion');
- summary.status=summary.coverageComplete?'complete':'stopped';
+ summary.status=diagnosticSuccess?'diagnostic_complete':summary.coverageComplete?'complete':'stopped';
  await page.screenshot({path:path.join(output,'final.png')});
  event('finish',{status:summary.status,coverageComplete:summary.coverageComplete,completed:summary.completedMissions.length});saveSummary();
- if(summary.status!=='complete')process.exitCode=1;
+ if(!['complete','diagnostic_complete'].includes(summary.status))process.exitCode=1;
 }
 
 try{await run();}

@@ -12,18 +12,21 @@ const contexts=new Set(),WAIT={timeout:10000};let server,browser,BASE=process.en
 // These tests do not provide natural campaign coverage or duration evidence.
 before(async()=>{
  if(!BASE){server=spawn(process.execPath,[fileURLToPath(new URL('../../server.mjs',import.meta.url))],{env:{...process.env,PORT:'0'},stdio:['ignore','pipe','pipe']});BASE=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Combat server timed out')),10000);server.on('error',reject);server.on('exit',code=>{clearTimeout(timer);reject(Error('Combat server exited '+code));});server.stdout.on('data',chunk=>{const m=String(chunk).match(/port (\d+)/);if(m){clearTimeout(timer);resolve('http://127.0.0.1:'+m[1]);}});});}
- browser=await chromium.launch({executablePath:browserPath(chromium),headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+ browser=await chromium.launch({executablePath:browserPath(chromium),headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader']});
 });
 afterEach(async()=>{await Promise.all([...contexts].map(c=>c.close().catch(()=>{})));contexts.clear();});
 after(async()=>{await browser?.close();server?.kill();});
 async function frames(page,n=6){await page.evaluate(n=>new Promise(resolve=>{let i=0;const tick=()=>{if(++i>=n)resolve();else requestAnimationFrame(tick);};requestAnimationFrame(tick);}),n);}
-async function arena(weapon='kestrel9'){
- const context=await browser.newContext({viewport:{width:1440,height:900}});contexts.add(context);await context.addInitScript(()=>localStorage.setItem('dead-circuit-settings-v1',JSON.stringify({mute:true,screenShake:false,reducedMotion:true})));
+async function arena(weapon='kestrel9',spatial=false){
+ const context=await browser.newContext({viewport:{width:960,height:640}});contexts.add(context);await context.addInitScript(()=>localStorage.setItem('dead-circuit-settings-v1',JSON.stringify({mute:true,screenShake:false,reducedMotion:true})));
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto(BASE+'/deadcircuit/index.html?test=1');await page.locator('#practiceBtn').click();await page.waitForFunction(()=>window.__dc?.mode==='playing',null,WAIT);
- await page.evaluate(weapon=>{const g=__dc;g.level={...g.level,width:1800,height:1200,walls:[],covers:[],doors:[],floorZones:[],props:[],objects:[],stages:[{title:'Controlled combat fixture',targets:['not-a-duration-test']}],spawn:{x:400,y:600},exit:{x:1700,y:1100,r:50}};g.enemies=[];g.bullets=[];g.effects=[];g.pickups=[];g.throwables=[];g.sounds=[];g.missionKills=0;g.equipWeapon(0,weapon);g.player.x=400;g.player.y=600;g.player.angle=0;g.player.weaponIndex=0;g.player.coverId=null;g.player.stance='stand';g.player.action=null;g.player.burst=null;g.player.fireCooldown=0;g.player.invulnerable=1e6;g.camera={x:700,y:600,zoom:1};g.input.clear();g.input.mouse.inside=false;g.input.lastDevice='keyboard';},weapon);
+ await page.evaluate(({weapon,spatial})=>{const g=__dc;g.level={...g.level,width:1800,height:1200,walls:[],covers:[],doors:[],floorZones:[],props:[],objects:[],stages:[{title:'Controlled combat fixture',targets:['not-a-duration-test']}],spawn:{x:400,y:600},exit:{x:1700,y:1100,r:50}};g.enemies=[];g.bullets=[];g.effects=[];g.pickups=[];g.throwables=[];g.sounds=[];g.missionKills=0;g.equipWeapon(0,weapon);g.player.x=400;g.player.y=600;g.player.angle=0;g.player.pitch=0;g.player.weaponIndex=0;g.player.coverId=null;g.player.stance='stand';g.player.action=null;g.player.burst=null;g.player.fireCooldown=0;g.player.invulnerable=1e6;g.camera={x:700,y:600,zoom:1};g.input.clear();g.input.mouse.inside=false;g.input.lastDevice='keyboard';if(!spatial)g.renderer.is3D=false;},{weapon,spatial});
  return{page,errors,close:async()=>{assert.deepEqual(errors,[]);await context.close();contexts.delete(context);}};
 }
 async function fire(page){await page.waitForFunction(()=>__dc.player.fireCooldown<=0&&!__dc.player.burst,null,WAIT);await page.evaluate(()=>__dc.firePlayer());}
+async function aim3D(page,id,height=1){
+ return page.evaluate(({id,height})=>{const g=__dc,r=g.renderer,e=g.enemies.find(e=>e.id===id),p=g.player;for(let i=0;i<32;i++){r.prepareAim(g);const q=r.projectPoint({x:e.x,y:e.y,height}),t=Math.tan(r.camera.fov*Math.PI/360);if(Math.hypot(q.ndcX,q.ndcY)<.001)break;p.angle+=Math.atan(q.ndcX*t*r.camera.aspect)*.85;p.pitch=Math.max(-1.08,Math.min(1.08,p.pitch+Math.atan(q.ndcY*t)*.85));}r.prepareAim(g);return{point:g.aimPoint3D,muzzle:g.muzzle3D,projected:r.projectPoint({x:e.x,y:e.y,height}),is3D:r.is3D,camera:r.camera.isPerspectiveCamera,renderCalls:r.webgl.info.render.calls};},{id,height});
+}
 
 test('live projectiles hit an enemy, consume ammunition and finish a kill through normal frames',async()=>{
  const s=await arena(),{page}=s;await page.evaluate(()=>__dc.spawnEnemy({id:'target',type:'patrol',x:700,y:600,disabled:true}));const ammo=await page.evaluate(()=>__dc.weaponState.mag);
@@ -64,7 +67,7 @@ test('a thrown smoke grenade blocks sight in both directions and flash interrupt
 test('held fire uses three-round bursts with a recovery gap, and swapping in the armory cancels pending rounds',async()=>{
  const s=await arena('trident'),{page}=s;
  await page.evaluate(()=>{const g=__dc,fire=g.firePlayer;window.__combatShots=[];g.firePlayer=function(...args){const before=this.weaponState.mag;const result=fire.apply(this,args);if(this.weaponState.mag<before)__combatShots.push({time:this.elapsed,weapon:this.weapon});return result;};});
- await page.mouse.move(900,450);await page.mouse.down();await page.waitForFunction(()=>__combatShots.length>=6,null,WAIT);await page.mouse.up();const shots=await page.evaluate(()=>__combatShots.slice(0,6));
+ await page.mouse.move(480,320);if(await page.evaluate(()=>typeof __dc.input.captureMouse==='function')){await page.mouse.click(480,320);await page.waitForFunction(()=>__dc.input.pointerLocked||__dc.input.lookFallback,null,WAIT);}await page.mouse.down();await page.waitForFunction(()=>__combatShots.length>=6,null,WAIT);await page.mouse.up();const shots=await page.evaluate(()=>__combatShots.slice(0,6));
  const gaps=shots.slice(1).map((s,i)=>s.time-shots[i].time);assert.ok(gaps[0]>=.065&&gaps[0]<=.12);assert.ok(gaps[1]>=.065&&gaps[1]<=.12);assert.ok(gaps[2]>=.25,'Burst recovery must be longer than its internal spacing');assert.ok(gaps[3]<=.12&&gaps[4]<=.12);
  await page.evaluate(()=>{const g=__dc;g.player.burst=null;g.player.fireCooldown=0;g.firePlayer();g.showLoadout();});assert.ok(await page.evaluate(()=>__dc.player.burst));await page.locator('[data-weapon="longwatch"]').click();await page.locator('#equipPrimary').click();const before=await page.evaluate(()=>__dc.profile.ammo.longwatch.mag);await page.locator('#armoryReturn').click();await frames(page,15);assert.equal(await page.evaluate(()=>__dc.profile.ammo.longwatch.mag),before);assert.equal(await page.evaluate(()=>__dc.player.burst),null);await s.close();
 });
@@ -98,4 +101,18 @@ test('the final commander actually spawns, accepts the officer evidence and no l
  // The optional written refusal is a second, independent route to the same ceasefire.
  await page.evaluate(()=>{delete __dc.campaign.flags.commanderRefusal;__dc.startMission(17);});await page.locator('#dialogueSkip').click();await page.evaluate(()=>__dc.interactObject(__dc.level.objects.find(o=>o.id==='commander-order')));
  assert.deepEqual(await page.evaluate(()=>{const e=__dc.enemies.find(e=>e.id==='final-commander');return{disabled:e.disabled,state:e.state,flag:__dc.campaign.flags.commanderRefusal};}),{disabled:true,state:'surrendered',flag:true});await s.close();
+});
+
+test('the real perspective renderer crosshair produces a converging 3D shot, while looking skyward misses the same ground enemy',async()=>{
+ const s=await arena('kestrel9',true),{page}=s;await page.evaluate(()=>__dc.spawnEnemy({id:'real-3d-target',type:'patrol',x:800,y:600,disabled:true}));await frames(page,2);
+ const aim=await aim3D(page,'real-3d-target',1);assert.equal(aim.is3D,true);assert.equal(aim.camera,true);assert.ok(aim.renderCalls>0);assert.ok(Math.hypot(aim.projected.ndcX,aim.projected.ndcY)<.01);assert.equal(aim.point.enemyId,'real-3d-target');assert.ok(aim.muzzle.height>.4&&aim.muzzle.height<2);
+ await fire(page);await page.waitForFunction(()=>__dc.enemies.find(e=>e.id==='real-3d-target')?.hp===48,null,WAIT);assert.equal(await page.evaluate(()=>__dc.weaponState.mag),14);
+ await page.evaluate(()=>{__dc.player.pitch=.85;__dc.input.lastDevice='gamepad';__dc.renderer.prepareAim(__dc);});await fire(page);const shot=await page.evaluate(()=>({vz:__dc.bullets.at(-1)?.vz,height:__dc.bullets.at(-1)?.height,point:__dc.aimPoint3D}));assert.ok(shot.vz>10);assert.equal(shot.point.enemyId,undefined);await frames(page,45);assert.equal(await page.evaluate(()=>__dc.enemies.find(e=>e.id==='real-3d-target').hp),48,'Skyward bullets must not damage the ground target');await s.close();
+});
+
+test('real 3D camera ray and fired rounds agree on tall-wall obstruction and shooting over a low cover',async()=>{
+ const s=await arena('kestrel9',true),{page}=s;await page.evaluate(()=>{const g=__dc;g.level={...g.level,walls:[{id:'real-wall',x:570,y:490,w:40,h:220,active:true,material:'concrete'}]};g.spawnEnemy({id:'occluded-3d-target',type:'patrol',x:800,y:600,disabled:true});});await frames(page,2);
+ const blocked=await aim3D(page,'occluded-3d-target',1.2);assert.equal(blocked.point.blocked,true);assert.equal(blocked.point.enemyId,undefined);await fire(page);await page.waitForFunction(()=>__dc.bullets.length===0,null,WAIT);assert.equal(await page.evaluate(()=>__dc.enemies[0].hp),72);
+ await page.evaluate(()=>{const g=__dc;g.level={...g.level,walls:[],covers:[{id:'real-low-cover',x:570,y:490,w:40,h:220,low:true,active:true,material:'metal'}]};});await frames(page,2);
+ const clear=await aim3D(page,'occluded-3d-target',1.2);assert.equal(clear.point.enemyId,'occluded-3d-target');assert.equal(clear.point.blocked,false);await fire(page);await page.waitForFunction(()=>__dc.enemies[0]?.hp===48,null,WAIT);assert.ok(await page.evaluate(()=>__dc.effects.some(e=>e.type==='hit'&&Number.isFinite(e.height))));await s.close();
 });

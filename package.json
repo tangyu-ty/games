@@ -16,6 +16,8 @@
     "node": ">=18"
   },
   "devDependencies": {
-    "playwright": "1.65.0"
+    "esbuild": "0.25.12",
+    "playwright": "1.65.0",
+    "three": "0.180.0"
   }
 }

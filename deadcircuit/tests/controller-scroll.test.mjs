@@ -38,10 +38,10 @@ test('a standard controller right stick scrolls a long field document and its ar
   assert.ok((await page.locator('#dialogueText').textContent()).length>180);
   const body=await page.locator('#dialogueText').evaluate(el=>({top:el.scrollTop,height:el.clientHeight,fullHeight:el.scrollHeight}));
   assert.ok(body.fullHeight>body.height+100,'The actual authored text overflows a readable small-screen panel');
-  const phase=await page.evaluate(()=>({mode:__dc.mode,phase:__dc.campaign.phase,line:__dc.campaign.sceneIndex,play:__dc.campaign.totalPlay}));
+  const phase=await page.evaluate(()=>({mode:__dc.mode,phase:__dc.campaign.phase,line:__dc.campaign.sceneIndex,play:__dc.campaign.totalPlay,yaw:__dc.player.angle,pitch:__dc.player.pitch}));
   await axis(page,1);await page.waitForFunction(()=>document.querySelector('#dialogueText').scrollTop>100);await axis(page,0);await frames(page);
   const stationary=await page.locator('#dialogueText').evaluate(el=>el.scrollTop);await frames(page,10);assert.equal(await page.locator('#dialogueText').evaluate(el=>el.scrollTop),stationary,'Neutral right stick stops scrolling');
-  assert.deepEqual(await page.evaluate(()=>({mode:__dc.mode,phase:__dc.campaign.phase,line:__dc.campaign.sceneIndex,play:__dc.campaign.totalPlay})),phase,'Reading a document neither advances it nor resumes combat');
+  assert.deepEqual(await page.evaluate(()=>({mode:__dc.mode,phase:__dc.campaign.phase,line:__dc.campaign.sceneIndex,play:__dc.campaign.totalPlay,yaw:__dc.player.angle,pitch:__dc.player.pitch})),phase,'Scrolling a document neither advances it nor rotates the shoulder camera or resumes combat');
   await axis(page,-1);await page.waitForFunction(()=>document.querySelector('#dialogueText').scrollTop===0);await axis(page,0);
   await page.locator('#dialogueNext').click();await page.keyboard.press('KeyM');await page.locator('#journalNotesTab').click();
   assert.equal(await page.locator('[data-fieldnote]').count(),1);

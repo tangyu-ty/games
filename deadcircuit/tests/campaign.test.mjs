@@ -31,7 +31,7 @@ before(async()=>{
   server=spawn(process.execPath,[fileURLToPath(new URL('../../server.mjs',import.meta.url))],{env:{...process.env,PORT:'0'},stdio:['ignore','pipe','pipe']});
   BASE=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Campaign test server timed out')),10000);server.once('error',reject);server.once('exit',code=>{clearTimeout(timer);reject(Error('Campaign test server exited '+code));});server.stdout.on('data',chunk=>{const match=String(chunk).match(/port (\d+)/);if(match){clearTimeout(timer);resolve('http://127.0.0.1:'+match[1]);}});});
  }
- browser=await chromium.launch({executablePath:browserPath(chromium),headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+ browser=await chromium.launch({executablePath:browserPath(chromium),headless:true,args:['--no-sandbox','--disable-dev-shm-usage','--enable-unsafe-swiftshader']});
 });
 afterEach(async()=>{await Promise.all([...contexts].map(c=>c.close().catch(()=>{})));contexts.clear();});
 after(async()=>{await browser?.close();server?.kill();if(previousStorage===undefined)delete globalThis.localStorage;else globalThis.localStorage=previousStorage;});
@@ -178,7 +178,7 @@ test('collected field documents survive reading and chapter completion without r
   return __dc.level.objects.filter(o=>Number.isInteger(o.fieldNote)).map(o=>({id:o.id,...CAMPAIGN[0].fieldNotes[o.fieldNote]}));
  });
  assert.equal(notes.length,2,'The first location contains two independently collectible documents');
- await page.locator('#hudJournal').click();await page.locator('#journalNotesTab').click();assert.equal(await page.locator('.field-note-card').count(),0);assert.equal(await page.locator('#fieldNotesEmpty').count(),1);
+ await page.keyboard.press('m');await page.waitForFunction(()=>__dc.mode==='journal',null,WAIT);await page.locator('#journalNotesTab').click();assert.equal(await page.locator('.field-note-card').count(),0);assert.equal(await page.locator('#fieldNotesEmpty').count(),1);
  for(const note of notes)assert.equal((await page.locator('.journal-content').innerText()).includes(note.title),false,'The archive cannot reveal an uncollected title');
  await page.locator('#journalBack').click();
  // Interaction and later mission completion are explicit state fixtures. The UI,
@@ -186,7 +186,7 @@ test('collected field documents survive reading and chapter completion without r
  await page.evaluate(id=>{const g=__dc,o=g.level.objects.find(o=>o.id===id);g.player.x=o.x;g.player.y=o.y;g.interactObject(o);},notes[0].id);
  await page.waitForFunction(()=>__dc.campaign.phase==='fieldnote',null,WAIT);assert.equal(await page.locator('#dialogueText').innerText(),notes[0].text);
  await page.reload();await page.locator('#continueBtn').click();assert.equal(await page.evaluate(()=>__dc.campaign.phase),'fieldnote');assert.equal(await page.locator('#dialogueText').innerText(),notes[0].text);
- await page.locator('#dialogueSkip').click();await page.waitForFunction(()=>__dc.mode==='playing',null,WAIT);await page.locator('#hudJournal').click();await page.locator('#journalNotesTab').click();
+ await page.locator('#dialogueSkip').click();await page.waitForFunction(()=>__dc.mode==='playing',null,WAIT);await page.keyboard.press('m');await page.waitForFunction(()=>__dc.mode==='journal',null,WAIT);await page.locator('#journalNotesTab').click();
  assert.equal(await page.locator('.field-note-card').count(),1);assert.equal(await page.locator('.field-note-card h4').innerText(),notes[0].title);assert.equal(await page.locator('.field-note-card p').innerText(),notes[0].text);assert.equal((await page.locator('.journal-content').innerText()).includes(notes[1].text),false);
  await page.locator('#journalStoryTab').click();await page.locator('.journal-content details summary').click();assert.equal((await page.locator('.journal-content details').innerText()).includes(notes[0].text),false,'Documents do not change the authored dialogue order');
  await page.locator('#journalRadioTab').click();assert.equal((await page.locator('.journal-content').innerText()).includes(notes[0].text),false,'Documents have their own archive, not a duplicated radio entry');
