@@ -2330,12 +2330,12 @@ function infected(g,e,target,def,dt,context){
 
 function supportBehaviour(g,e,def,dt,context){
  const ai=e.ai;
- if(e.type==='radio'&&ai.visible&&ai.radioCalls<1&&ai.specialCooldown<=0&&ai.alertAge>1){beginAction(e,'calling',2.1,ai.target);return true;}
+ if(e.type==='radio'&&ai.visible&&alive(ai.target)&&ai.radioCalls<1&&ai.specialCooldown<=0&&ai.alertAge>1){beginAction(e,'calling',2.1,ai.target);return true;}
  if(e.type!=='medic'||ai.healCharges<=0||ai.healCooldown>0)return false;
  const wounded=(g.enemies||[]).filter(a=>a!==e&&alive(a)&&corporate(a.faction)&&a.hp<(a.maxHp||a.hp)*.68&&distance(a,e)<460&&g.hasSight?.(e,a));
  const ally=wounded.sort((a,b)=>a.hp/(a.maxHp||1)-b.hp/(b.maxHp||1))[0];
  if(!ally)return false;
- if(ai.visible&&distance(e,ai.target)<220)return false;
+ if(ai.visible&&alive(ai.target)&&distance(e,ai.target)<220)return false;
  if(distance(e,ally)<65)beginAction(e,'heal',1.9,ally);
  else navigate(g,e,ally,(def.speed||95)*.9,dt,context,{stop:52});
  return true;

@@ -100,6 +100,47 @@ test('a medic heals a living ally but never resurrects a defeated one',()=>{
  assert.ok(wounded.hp>25);assert.equal(dead.hp,0);assert.equal(medic.ai.healCharges,1);
 });
 
+test('a medic can notice an unconfirmed silhouette while a nearby ally becomes wounded',()=>{
+ const g=fixture(),medic=g.add('medic',600,400),ally=g.add('patrol',640,450);
+ g.tick(1/60);
+ // A real perception edge: the first silhouette raises awareness but has not
+ // reached the confirmation threshold. Another fight has just wounded an ally.
+ ally.hp=25;medic.ai.perceptionTimer=0;
+ assert.doesNotThrow(()=>g.tick(1/60));
+ assert.equal(medic.ai.visible,true);assert.equal(medic.ai.target,null);assert.ok(medic.awareness<.55);
+ g.tick(2.2);assert.ok(ally.hp>25,'The support action remains usable while threat confirmation continues');
+});
+
+test('all sixteen roles survive occluded, unconfirmed, confirmed, lost, defeated and restored target transitions',()=>{
+ const roles=Object.keys(ENEMY_TYPES);assert.equal(roles.length,16);
+ const finiteActors=g=>assert.ok(g.enemies.every(e=>[e.x,e.y,e.hp,e.angle].every(Number.isFinite)),'Every actor remains finite');
+ for(const role of roles){
+  const wall={id:'perception-wall',x:780,y:0,w:40,h:1700,active:true};
+  const g=fixture({walls:[wall]}),enemy=g.add(role,600,400);
+  // A stable authored actor ID exercises gradual recognition for every role.
+  enemy.id='edge';
+  const ally=g.add(ENEMY_TYPES[role].faction==='infected'?'walker':'patrol',640,450);ally.hp=25;
+  assert.doesNotThrow(()=>g.tick(1),role+' while sight is blocked');assert.equal(enemy.ai.visible,false,role);
+  wall.active=false;
+  assert.equal(g.until(()=>enemy.ai.visible,.5),true,role+' notices the newly opened view');
+  assert.equal(enemy.ai.target,null,role+' has not yet confirmed the first silhouette');
+  assert.ok(enemy.awareness<.55,role+' remains below confirmation threshold');finiteActors(g);
+  assert.equal(g.until(()=>enemy.ai.target===g.player,1),true,role+' confirms a living target');
+  wall.active=true;assert.doesNotThrow(()=>g.tick(.6),role+' loses its target behind a wall');assert.equal(enemy.ai.visible,false,role);
+  g.player.hp=0;assert.doesNotThrow(()=>g.tick(.6),role+' after its target is defeated');assert.equal(enemy.ai.target,null,role);finiteActors(g);
+  // This is the plain-data enemy shape saved by Game. No live target or AI
+  // references are inserted into the restored instance.
+  const fields=['id','type','faction','x','y','r','hp','maxHp','angle','state','awareness','ammo','cooldown','suppression','reloadTime'];
+  const saved=Object.fromEntries(fields.filter(k=>enemy[k]!==undefined).map(k=>[k,enemy[k]]));saved.radioCalls=enemy.ai.radioCalls;saved.healCharges=enemy.ai.healCharges;
+  const restoredWall={...wall},restored=fixture({walls:[restoredWall]}),copy={...ENEMY_TYPES[role],...saved};
+  restored.enemies.push(copy);const other=restored.add(ally.type,640,450);other.hp=25;
+  assert.doesNotThrow(()=>restored.tick(.7),role+' initializes from flattened saved fields');
+  assert.equal(copy.ai.radioCalls,saved.radioCalls,role+' keeps radio budget');assert.equal(copy.ai.healCharges,saved.healCharges,role+' keeps medical budget');
+  restoredWall.active=false;assert.doesNotThrow(()=>restored.tick(2),role+' resumes actual perception after loading');
+  restored.player.hp=0;assert.doesNotThrow(()=>restored.tick(.6),role+' loses the restored target');finiteActors(restored);
+ }
+});
+
 test('restored finite radio and medical budgets do not refill when AI is initialized',()=>{
  const g=fixture(),radio=g.add('radio',600,400),medic=g.add('medic',600,600),wounded=g.add('patrol',640,600);
  radio.radioCalls=1;medic.healCharges=0;wounded.hp=25;g.aiDirector={reinforcements:2};

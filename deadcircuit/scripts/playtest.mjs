@@ -282,7 +282,7 @@ async function run(){
   Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>{const input=window.__dcNaturalPad;return[{id:'DEAD CIRCUIT natural-input standard controller',index:0,connected:true,mapping:'standard',timestamp:performance.now(),axes:[...input.axes],buttons:Array.from({length:17},(_,i)=>({pressed:input.buttons.includes(i),touched:input.buttons.includes(i),value:input.buttons.includes(i)?1:0}))}];}});
  });
  page=await context.newPage();
- page.on('pageerror',error=>fault('PAGE_ERROR',error.message));
+ page.on('pageerror',error=>fault('PAGE_ERROR',error.message,{stack:error.stack||null}));
  page.on('console',message=>{if(message.type()==='error'&&!/favicon/.test(message.text()))fault('CONSOLE_ERROR',message.text());});
  await page.goto(base+'/deadcircuit/index.html?test=1',{waitUntil:'networkidle',timeout:30000});
  await page.waitForFunction(()=>window.__dc?.ui&&window.__dc?.input,{timeout:20000});
