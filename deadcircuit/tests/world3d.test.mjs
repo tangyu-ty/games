@@ -117,7 +117,7 @@ test('actual camera and aiming blockers update after a door opens, recloses, is 
   return{closed,open,reclosed,destroyed,moved};
  });
  assert.equal(state.closed.doorVisible,true);assert.equal(state.closed.doorCollidable,true);assert.equal(state.closed.doorAim,true);
- for(const s of [state.open,state.destroyed]){assert.equal(s.doorVisible,false);assert.equal(s.doorCollidable,false);assert.equal(s.doorAim,false);assert.ok(s.distance>state.closed.distance+2);}
+ for(const s of [state.open,state.destroyed]){assert.equal(s.doorVisible,false);assert.equal(s.doorCollidable,false);assert.equal(s.doorAim,false);assert.equal(s.distance,0);}
  assert.equal(state.reclosed.doorVisible,true);assert.equal(state.reclosed.doorCollidable,true);close(state.reclosed.distance,state.closed.distance);
  close(state.moved.coverBounds.min[0],840*UNIT_SCALE);close(state.moved.coverBounds.min[2],620*UNIT_SCALE);close(state.moved.coverPosition[0],(840+55)*UNIT_SCALE);close(state.moved.coverPosition[2],(620+30)*UNIT_SCALE);
  assert.deepEqual(errors,[]);
@@ -141,7 +141,7 @@ test('standing, crouched and aiming shoulder cameras remain outside walls and ke
   }
   return out;
  });
- assert.equal(results.length,96);assert.ok(results.some(s=>s.collision<s.desired-.1),'The test must actually exercise camera collision shortening');
+ assert.equal(results.length,96);assert.ok(results.every(s=>s.collision===0&&s.desired===0),'First-person camera remains at the player position');
  for(const s of results){assert.equal(s.centerBlocked,false,JSON.stringify(s));assert.equal(s.nearBlocked,false,JSON.stringify(s));assert.ok(Number.isFinite(s.height)&&s.height>.07);}
  assert.deepEqual(errors,[]);
 });

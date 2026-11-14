@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b1019">
-  <meta name="description" content="断线协议 DEAD CIRCUIT：原创3D越肩第三人称战术射击。穿过十八处独立战场，拆装武器、利用掩体，在安保与感染者之间找出城市失控的真相。">
+  <meta name="description" content="断线协议 DEAD CIRCUIT：原创3D第一人称战术射击。穿过十八处独立战场，拆装武器、利用掩体，在安保与感染者之间找出城市失控的真相。">
   <title>断线协议 · DEAD CIRCUIT</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230c1825'/%3E%3Cpath d='M8 21l15-15M7 17l8 8' stroke='%2387d1cb' stroke-width='3'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <canvas id="game" aria-label="断线协议3D越肩第三人称战术行动画面"></canvas>
+  <canvas id="game" aria-label="断线协议3D第一人称战术行动画面"></canvas>
   <div id="screenTexture" aria-hidden="true"></div>
   <div id="hud" class="hud" hidden>
     <div id="combatReticle" class="combat-reticle" aria-hidden="true" hidden><i class="reticle-dot"></i><i class="reticle-line reticle-top"></i><i class="reticle-line reticle-right"></i><i class="reticle-line reticle-bottom"></i><i class="reticle-line reticle-left"></i></div>
@@ -21,7 +21,7 @@
     <div class="hud-objective"><span class="micro">当前目标</span><strong id="hudObjective">抵达目标区域</strong><span id="hudObjectiveDetail"></span></div>
     <div id="hudRadio" class="radio-message" hidden><span class="micro">小队通讯</span><p></p></div>
     <div id="interactionHint" class="interaction-hint" hidden><kbd>F</kbd><span id="interactionText">互动</span><div class="interaction-track"><i id="interactionProgress"></i></div></div>
-    <div id="mouseCaptureHint" class="mouse-capture-hint" hidden><button id="captureMouseBtn">点击进入越肩瞄准 <span>↗</span></button><span>移动鼠标转动镜头 · Esc 暂停并释放鼠标</span></div>
+    <div id="mouseCaptureHint" class="mouse-capture-hint" hidden><button id="captureMouseBtn">点击进入第一人称瞄准 <span>↗</span></button><span>移动鼠标转动镜头 · Esc 暂停并释放鼠标</span></div>
     <div class="hud-bottom">
       <div class="vitals-card"><div class="vitals-heading"><span>许砚 <em>FIELD OPERATIVE</em></span><strong id="hudHealthText">100</strong></div><div class="meter health"><i id="hudHealth"></i></div><div class="secondary-vitals"><span>护甲 <b id="hudArmorText">60</b></span><div class="meter armor"><i id="hudArmor"></i></div></div><div class="meter stamina"><i id="hudStamina"></i></div><div class="stance-line"><span id="hudStance">站立</span><span id="hudAction">待命</span></div></div>
     <div class="hud-controls" id="hudControls"><span><kbd>R</kbd> 换弹</span><span><kbd>C</kbd> 掩体</span><span><kbd>Space</kbd> 翻越 / 闪避</span><span><kbd>G</kbd> 投掷</span></div>
