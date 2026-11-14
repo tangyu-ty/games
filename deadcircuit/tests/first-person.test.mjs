@@ -32,3 +32,14 @@ test('first-person view follows the player, shows the equipped weapon and hides 
  await page.keyboard.down('KeyW');try{await page.waitForFunction(p=>Math.hypot(__dc.player.x-p.x,__dc.player.y-p.y)>15,state.player,WAIT);}finally{await page.keyboard.up('KeyW');}
  const moved=await page.evaluate(()=>({p:__dc.player,c:__dc.renderer.cameraData}));assert.ok(Math.hypot(moved.c.x-moved.p.x,moved.c.y-moved.p.y)<.1);assert.deepEqual(errors,[]);
 });
+
+test('first-person weapon follows loadout and responds to real firing',async()=>{
+ const {page,errors}=await arena();
+ await page.evaluate(()=>{__dc.enemies=[];__dc.bullets=[];__dc.player.invulnerable=100;});
+ const before=await page.evaluate(()=>({key:__dc.renderer.viewWeaponKey,shots:__dc.missionShots||0}));
+ await page.keyboard.press('KeyQ');await page.waitForFunction(key=>__dc.renderer.viewWeaponKey!==key,before.key,WAIT);
+ const changed=await page.evaluate(()=>({key:__dc.renderer.viewWeaponKey,weapon:__dc.weapon}));assert.ok(changed.key.startsWith(changed.weapon));
+ await page.mouse.move(640,400);await page.mouse.down();try{await page.waitForFunction(n=>(__dc.missionShots||0)>n,before.shots,WAIT);}finally{await page.mouse.up();}
+ const shot=await page.evaluate(()=>({shots:__dc.missionShots,flash:!!__dc.renderer.viewWeapon.userData.viewFlash,recoil:__dc.player.recoil}));assert.ok(shot.shots>before.shots);assert.equal(shot.flash,true);
+ assert.deepEqual(errors,[]);
+});
