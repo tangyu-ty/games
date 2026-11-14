@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#0b1019">
-  <meta name="description" content="断线协议 DEAD CIRCUIT：原创3D越肩第三人称战术射击。穿过十八处独立战场，拆装武器、利用掩体，在安保与感染者之间找出城市失控的真相。">
+  <meta name="description" content="断线协议 DEAD CIRCUIT：原创3D第一人称战术射击。穿过十八处独立战场，拆装武器、利用掩体，在安保与感染者之间找出城市失控的真相。">
   <title>断线协议 · DEAD CIRCUIT</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230c1825'/%3E%3Cpath d='M8 21l15-15M7 17l8 8' stroke='%2387d1cb' stroke-width='3'/%3E%3C/svg%3E">
   <style>:root{color-scheme:dark;--bg:#090e17;--panel:#101927;--panel2:#152130;--ink:#edf3f3;--muted:#8d9fae;--line:#2a3949;--orange:#ff9c59;--orange2:#ffc485;--cyan:#87d1cb;--red:#ff7d7d;--green:#a6d8a4;--shadow:0 26px 90px #0009;font-family:Inter,"Noto Sans SC","Microsoft YaHei",system-ui,sans-serif;font-synthesis:none}
@@ -42,7 +42,7 @@
 </style>
 </head>
 <body>
-  <canvas id="game" aria-label="断线协议3D越肩第三人称战术行动画面"></canvas>
+  <canvas id="game" aria-label="断线协议3D第一人称战术行动画面"></canvas>
   <div id="screenTexture" aria-hidden="true"></div>
   <div id="hud" class="hud" hidden>
     <div id="combatReticle" class="combat-reticle" aria-hidden="true" hidden><i class="reticle-dot"></i><i class="reticle-line reticle-top"></i><i class="reticle-line reticle-right"></i><i class="reticle-line reticle-bottom"></i><i class="reticle-line reticle-left"></i></div>
@@ -53,7 +53,7 @@
     <div class="hud-objective"><span class="micro">当前目标</span><strong id="hudObjective">抵达目标区域</strong><span id="hudObjectiveDetail"></span></div>
     <div id="hudRadio" class="radio-message" hidden><span class="micro">小队通讯</span><p></p></div>
     <div id="interactionHint" class="interaction-hint" hidden><kbd>F</kbd><span id="interactionText">互动</span><div class="interaction-track"><i id="interactionProgress"></i></div></div>
-    <div id="mouseCaptureHint" class="mouse-capture-hint" hidden><button id="captureMouseBtn">点击进入越肩瞄准 <span>↗</span></button><span>移动鼠标转动镜头 · Esc 暂停并释放鼠标</span></div>
+    <div id="mouseCaptureHint" class="mouse-capture-hint" hidden><button id="captureMouseBtn">点击进入第一人称瞄准 <span>↗</span></button><span>移动鼠标转动镜头 · Esc 暂停并释放鼠标</span></div>
     <div class="hud-bottom">
       <div class="vitals-card"><div class="vitals-heading"><span>许砚 <em>FIELD OPERATIVE</em></span><strong id="hudHealthText">100</strong></div><div class="meter health"><i id="hudHealth"></i></div><div class="secondary-vitals"><span>护甲 <b id="hudArmorText">60</b></span><div class="meter armor"><i id="hudArmor"></i></div></div><div class="meter stamina"><i id="hudStamina"></i></div><div class="stance-line"><span id="hudStance">站立</span><span id="hudAction">待命</span></div></div>
     <div class="hud-controls" id="hudControls"><span><kbd>R</kbd> 换弹</span><span><kbd>C</kbd> 掩体</span><span><kbd>Space</kbd> 翻越 / 闪避</span><span><kbd>G</kbd> 投掷</span></div>
@@ -5568,7 +5568,7 @@
    <div><div class="brand-line"><div class="brand-square"></div><span>WHITE FALCON CITY<br>TACTICAL INCIDENT / 09</span></div><h1 class="menu-title">DEAD<span>CIRCUIT</span></h1><h2 class="menu-cn">\u65AD\u7EBF\u534F\u8BAE</h2><p class="menu-description">\u5F53\u4E00\u5EA7\u57CE\u5E02\u88AB\u91CD\u65B0\u5212\u5206\u654C\u6211\uFF0C<br>\u4F60\u8981\u51B3\u5B9A\uFF0C\u67AA\u53E3\u8FD8\u8BE5\u542C\u8C01\u7684\u547D\u4EE4\u3002<br>\u7A7F\u8FC7\u5C01\u9501\u7EBF\uFF0C\u62C6\u5F00\u8C0E\u8A00\uFF0C\u628A\u4EBA\u5E26\u56DE\u5BB6\u3002</p>
     <div class="menu-buttons">${hasSave ? button("continueBtn", `\u7EE7\u7EED\u884C\u52A8 <span>${completed}/18 \u2192</span>`, "primary", "data-autofocus") : ""}${button("newGameBtn", `\u5F00\u59CB\u65B0\u6218\u5F79 <span>\u2192</span>`, hasSave ? "secondary" : "primary", hasSave ? "" : "data-autofocus")}${button("practiceBtn", "\u6218\u672F\u8BAD\u7EC3\u573A <span>\u2197</span>", "secondary")}</div>
     <div class="difficulty-picker"><span>\u884C\u52A8\u96BE\u5EA6</span><select id="menuDifficulty" aria-label="\u9009\u62E9\u6E38\u620F\u96BE\u5EA6">${Object.entries(DIFFICULTIES).map(([id2, name]) => `<option value="${id2}" ${difficulty === id2 ? "selected" : ""}>${name}</option>`).join("")}</select></div>
-    <div class="menu-secondary">${button("guideBtn", "\u6218\u672F\u624B\u518C", "quiet")}${button("settingsBtn", "\u8BBE\u7F6E", "quiet")}${hasSave ? button("menuJournalBtn", "\u884C\u52A8\u6863\u6848", "quiet") : ""}</div><p class="build-note">3D \u8D8A\u80A9\u7B2C\u4E09\u4EBA\u79F0 / 18 \u5904\u72EC\u7ACB\u6218\u573A / \u6A21\u5757\u5316\u519B\u68B0<br>\u952E\u9F20 \xB7 \u6807\u51C6\u624B\u67C4 \xB7 \u89E6\u5C4F\u3000/\u3000\u672C\u5730\u81EA\u52A8\u5B58\u6863</p></div>
+    <div class="menu-secondary">${button("guideBtn", "\u6218\u672F\u624B\u518C", "quiet")}${button("settingsBtn", "\u8BBE\u7F6E", "quiet")}${hasSave ? button("menuJournalBtn", "\u884C\u52A8\u6863\u6848", "quiet") : ""}</div><p class="build-note">3D \u7B2C\u4E00\u4EBA\u79F0 / 18 \u5904\u72EC\u7ACB\u6218\u573A / \u6A21\u5757\u5316\u519B\u68B0<br>\u952E\u9F20 \xB7 \u6807\u51C6\u624B\u67C4 \xB7 \u89E6\u5C4F\u3000/\u3000\u672C\u5730\u81EA\u52A8\u5B58\u6863</p></div>
    <aside class="menu-intel"><div class="intel-top"><span>\u57CE\u5E02\u89C2\u6D4B / WFC\u201404</span><span class="live">\u25CF SIGNAL UNSTABLE</span></div><div class="city-art" aria-hidden="true">${[[2, 15, 35], [12, 14, 56], [25, 13, 73], [38, 17, 45], [53, 12, 88], [67, 16, 64], [80, 15, 44], [94, 10, 67]].map(([x, w, h]) => `<i class="city-building" style="--x:${x}%;--w:${w}%;--h:${h}%"></i>`).join("")}<i class="crosshair"></i><div class="city-caption">\u767D\u96BC\u57CE / 05:42 AM<br>RECOGNITION NETWORK: COMPROMISED</div></div><div class="intel-bottom"><div class="eyebrow">\u4E00\u591C\u4E4B\u540E\uFF0C\u6574\u5EA7\u57CE\u6210\u4E3A\u654C\u533A</div><h2>\u9009\u62E9\u8DEF\u7EBF\uFF0C\u4E5F\u9009\u62E9\u4EE3\u4EF7\u3002</h2><p>\u5728\u5B89\u4FDD\u7684\u4EA4\u53C9\u706B\u529B\u3001\u611F\u67D3\u8005\u7684\u8FFD\u730E\u4E0E\u65E0\u4EBA\u673A\u7684\u626B\u63CF\u4E4B\u95F4\u7A7F\u884C\u3002\u5173\u95ED\u7535\u8DEF\u3001\u6253\u5F00\u4FA7\u95E8\u3001\u6539\u53D8\u63A9\u4F53\uFF1B\u6BCF\u4E00\u6B21\u5F00\u706B\uFF0C\u90FD\u4F1A\u8BA9\u522B\u7684\u4E1C\u897F\u542C\u89C1\u3002</p><div class="faction-row"><div><i></i><strong>\u96C6\u56E2\u5B89\u4FDD</strong><small>\u534F\u540C \xB7 \u538B\u5236 \xB7 \u5305\u6284</small></div><div><i></i><strong>\u5931\u63A7\u611F\u67D3\u8005</strong><small>\u58F0\u6E90 \xB7 \u8FFD\u730E \xB7 \u56F4\u56F0</small></div><div><i></i><strong>\u65E0\u4EBA\u6B66\u88C5</strong><small>\u626B\u63CF \xB7 \u9884\u8B66 \xB7 \u5F31\u70B9</small></div></div></div></aside>
   </section>`, "menu");
       this.on("continueBtn", () => g.continueGame());
@@ -5744,7 +5744,7 @@
         const current = Number.isFinite(s36[key]) ? s36[key] : fallback, custom = !values.some((v2) => Math.abs(v2 - current) < 1e-7);
         return `<div class="settings-row"><div><strong>${title}</strong><small>${description}</small></div><select id="${id2}" aria-label="${title}">${values.map((value, i) => `<option value="${value}" ${Math.abs(current - value) < 1e-7 ? "selected" : ""}>${["\u4F4E", "\u6807\u51C6", "\u9AD8", "\u5F88\u9AD8"][i]}</option>`).join("")}${custom ? `<option value="${current}" selected>\u81EA\u5B9A\u4E49</option>` : ""}</select></div>`;
       };
-      this.mount(`<section class="screen screen-narrow screen-scroll"><header class="section-head"><div><div class="eyebrow">PERSONAL CONFIGURATION / \u4E2A\u4EBA\u8BBE\u7F6E</div><h2>\u6309\u81EA\u5DF1\u7684\u8282\u594F\u884C\u52A8\u3002</h2></div></header><div class="panel"><div class="settings-row"><div><strong>\u884C\u52A8\u96BE\u5EA6</strong><small>\u968F\u65F6\u8C03\u6574\uFF0C\u4FDD\u7559\u6218\u5F79\u8FDB\u5EA6\u3002</small></div><select id="settingsDifficulty" aria-label="\u884C\u52A8\u96BE\u5EA6">${Object.entries(DIFFICULTIES).map(([id2, title]) => `<option value="${id2}" ${s36.difficulty === id2 ? "selected" : ""}>${title}</option>`).join("")}</select></div>${sensitivity("mouseSensitivity", "settingsMouseSensitivity", "\u9F20\u6807\u955C\u5934\u7075\u654F\u5EA6", "\u8C03\u6574\u79FB\u52A8\u9F20\u6807\u65F6\u8F6C\u52A8\u8D8A\u80A9\u955C\u5934\u7684\u901F\u5EA6\u3002", [17e-4, 26e-4, 36e-4, 47e-4], 26e-4)}${sensitivity("lookSensitivity", "settingsLookSensitivity", "\u624B\u67C4\u955C\u5934\u7075\u654F\u5EA6", "\u8C03\u6574\u53F3\u6447\u6746\u7684\u955C\u5934\u8F6C\u52A8\u901F\u5EA6\u3002", [0.65, 1, 1.4, 1.8], 1)}${sensitivity("touchSensitivity", "settingsTouchSensitivity", "\u89E6\u5C4F\u955C\u5934\u7075\u654F\u5EA6", "\u8C03\u6574\u53F3\u4FA7\u6ED1\u52A8\u65F6\u7684\u955C\u5934\u8F6C\u52A8\u901F\u5EA6\u3002", [34e-4, 52e-4, 73e-4, 94e-4], 52e-4)}${toggle("invertY", "\u53CD\u8F6C\u5782\u76F4\u89C6\u89D2", "\u540C\u65F6\u4F5C\u7528\u4E8E\u9F20\u6807\u3001\u6447\u6746\u4E0E\u89E6\u5C4F\u7684\u4E0A\u4E0B\u89C6\u89D2\u3002")}${toggle("mute", "\u9759\u97F3", "\u5173\u95ED\u97F3\u4E50\u4E0E\u97F3\u6548\u3002\u9996\u6B21\u4EA4\u4E92\u540E\u6D4F\u89C8\u5668\u624D\u4F1A\u5141\u8BB8\u64AD\u653E\u58F0\u97F3\u3002")}${toggle("reduced", "\u51CF\u5C11\u52A8\u6001\u6548\u679C", "\u51CF\u5C11\u9707\u52A8\u3001\u5C4F\u5E55\u95EA\u5149\u548C\u754C\u9762\u52A8\u753B\u3002")}${toggle("largeText", "\u653E\u5927\u5267\u60C5\u5B57\u5E55", "\u63D0\u9AD8\u5BF9\u8BDD\u4E0E\u56DE\u4FE1\u7684\u6587\u5B57\u5927\u5C0F\u3002")}${toggle("minimap", "\u6218\u672F\u5C0F\u5730\u56FE", "\u684C\u9762\u7AEF\u663E\u793A\u76EE\u6807\u4F4D\u7F6E\u4E0E\u533A\u57DF\u5E03\u5C40\u3002")}${toggle("aimAssist", "\u624B\u67C4\u8F85\u52A9\u7784\u51C6", "\u5E2E\u52A9\u7A33\u5B9A\u63A5\u8FD1\u53EF\u89C1\u76EE\u6807\u7684\u7784\u51C6\u3002")}<div class="settings-row"><div><strong>\u624B\u67C4\u6447\u6746\u6B7B\u533A</strong><small>\u6447\u6746\u6F02\u79FB\u65F6\u63D0\u9AD8\uFF1B\u5C0F\u5E45\u64CD\u4F5C\u4E0D\u7075\u654F\u65F6\u964D\u4F4E\u3002</small></div><select id="deadzoneSetting" aria-label="\u6447\u6746\u6B7B\u533A">${[0.12, 0.18, 0.24, 0.3].map((v2) => `<option value="${v2}" ${Math.abs((s36.deadzone ?? 0.18) - v2) < 0.01 ? "selected" : ""}>${Math.round(v2 * 100)}%</option>`).join("")}</select></div><div class="actions">${button("settingsBack", "\u4FDD\u5B58\u8BBE\u7F6E\u5E76\u8FD4\u56DE \u2192", "primary", "data-autofocus")}</div><p class="small muted" style="line-height:1.8">\u8BBE\u7F6E\u4E0E\u6E38\u620F\u8FDB\u5EA6\u4EC5\u4FDD\u5B58\u5728\u5F53\u524D\u6D4F\u89C8\u5668\u3002\u6CA1\u6709\u8D26\u53F7\u3001\u5728\u7EBF\u6392\u884C\u699C\u6216\u8FDC\u7AEF\u5B58\u6863\u3002</p></div></section>`, "settings");
+      this.mount(`<section class="screen screen-narrow screen-scroll"><header class="section-head"><div><div class="eyebrow">PERSONAL CONFIGURATION / \u4E2A\u4EBA\u8BBE\u7F6E</div><h2>\u6309\u81EA\u5DF1\u7684\u8282\u594F\u884C\u52A8\u3002</h2></div></header><div class="panel"><div class="settings-row"><div><strong>\u884C\u52A8\u96BE\u5EA6</strong><small>\u968F\u65F6\u8C03\u6574\uFF0C\u4FDD\u7559\u6218\u5F79\u8FDB\u5EA6\u3002</small></div><select id="settingsDifficulty" aria-label="\u884C\u52A8\u96BE\u5EA6">${Object.entries(DIFFICULTIES).map(([id2, title]) => `<option value="${id2}" ${s36.difficulty === id2 ? "selected" : ""}>${title}</option>`).join("")}</select></div>${sensitivity("mouseSensitivity", "settingsMouseSensitivity", "\u9F20\u6807\u955C\u5934\u7075\u654F\u5EA6", "\u8C03\u6574\u79FB\u52A8\u9F20\u6807\u65F6\u8F6C\u52A8\u7B2C\u4E00\u4EBA\u79F0\u89C6\u89D2\u7684\u901F\u5EA6\u3002", [17e-4, 26e-4, 36e-4, 47e-4], 26e-4)}${sensitivity("lookSensitivity", "settingsLookSensitivity", "\u624B\u67C4\u955C\u5934\u7075\u654F\u5EA6", "\u8C03\u6574\u53F3\u6447\u6746\u7684\u955C\u5934\u8F6C\u52A8\u901F\u5EA6\u3002", [0.65, 1, 1.4, 1.8], 1)}${sensitivity("touchSensitivity", "settingsTouchSensitivity", "\u89E6\u5C4F\u955C\u5934\u7075\u654F\u5EA6", "\u8C03\u6574\u53F3\u4FA7\u6ED1\u52A8\u65F6\u7684\u955C\u5934\u8F6C\u52A8\u901F\u5EA6\u3002", [34e-4, 52e-4, 73e-4, 94e-4], 52e-4)}${toggle("invertY", "\u53CD\u8F6C\u5782\u76F4\u89C6\u89D2", "\u540C\u65F6\u4F5C\u7528\u4E8E\u9F20\u6807\u3001\u6447\u6746\u4E0E\u89E6\u5C4F\u7684\u4E0A\u4E0B\u89C6\u89D2\u3002")}${toggle("mute", "\u9759\u97F3", "\u5173\u95ED\u97F3\u4E50\u4E0E\u97F3\u6548\u3002\u9996\u6B21\u4EA4\u4E92\u540E\u6D4F\u89C8\u5668\u624D\u4F1A\u5141\u8BB8\u64AD\u653E\u58F0\u97F3\u3002")}${toggle("reduced", "\u51CF\u5C11\u52A8\u6001\u6548\u679C", "\u51CF\u5C11\u9707\u52A8\u3001\u5C4F\u5E55\u95EA\u5149\u548C\u754C\u9762\u52A8\u753B\u3002")}${toggle("largeText", "\u653E\u5927\u5267\u60C5\u5B57\u5E55", "\u63D0\u9AD8\u5BF9\u8BDD\u4E0E\u56DE\u4FE1\u7684\u6587\u5B57\u5927\u5C0F\u3002")}${toggle("minimap", "\u6218\u672F\u5C0F\u5730\u56FE", "\u684C\u9762\u7AEF\u663E\u793A\u76EE\u6807\u4F4D\u7F6E\u4E0E\u533A\u57DF\u5E03\u5C40\u3002")}${toggle("aimAssist", "\u624B\u67C4\u8F85\u52A9\u7784\u51C6", "\u5E2E\u52A9\u7A33\u5B9A\u63A5\u8FD1\u53EF\u89C1\u76EE\u6807\u7684\u7784\u51C6\u3002")}<div class="settings-row"><div><strong>\u624B\u67C4\u6447\u6746\u6B7B\u533A</strong><small>\u6447\u6746\u6F02\u79FB\u65F6\u63D0\u9AD8\uFF1B\u5C0F\u5E45\u64CD\u4F5C\u4E0D\u7075\u654F\u65F6\u964D\u4F4E\u3002</small></div><select id="deadzoneSetting" aria-label="\u6447\u6746\u6B7B\u533A">${[0.12, 0.18, 0.24, 0.3].map((v2) => `<option value="${v2}" ${Math.abs((s36.deadzone ?? 0.18) - v2) < 0.01 ? "selected" : ""}>${Math.round(v2 * 100)}%</option>`).join("")}</select></div><div class="actions">${button("settingsBack", "\u4FDD\u5B58\u8BBE\u7F6E\u5E76\u8FD4\u56DE \u2192", "primary", "data-autofocus")}</div><p class="small muted" style="line-height:1.8">\u8BBE\u7F6E\u4E0E\u6E38\u620F\u8FDB\u5EA6\u4EC5\u4FDD\u5B58\u5728\u5F53\u524D\u6D4F\u89C8\u5668\u3002\u6CA1\u6709\u8D26\u53F7\u3001\u5728\u7EBF\u6392\u884C\u699C\u6216\u8FDC\u7AEF\u5B58\u6863\u3002</p></div></section>`, "settings");
       this.overlay.querySelectorAll("[data-setting]").forEach((el2) => el2.onclick = () => {
         g.setSetting(el2.dataset.setting, !s36[el2.dataset.setting]);
         this.settings();
@@ -5756,11 +5756,11 @@
     }
     guide() {
       const tab = this.guideTab;
-      const controls = [["\u79FB\u52A8 / \u8F6C\u52A8\u955C\u5934", "WASD / \u9F20\u6807\u79FB\u52A8", "\u5DE6 / \u53F3\u6447\u6746"], ["\u5F00\u706B / \u8D8A\u80A9\u7CBE\u786E\u7784\u51C6", "\u9F20\u6807\u5DE6 / \u53F3\u952E", "RT / LT"], ["\u6362\u5F39 / \u5207\u6362\u6B66\u5668", "R / Q \u6216 1\u30012", "X / Y"], ["\u51B2\u523A / \u7FFB\u8D8A\u6216\u6ED1\u6B65", "Shift / Space", "\u6309\u4F4F L3 / B"], ["\u8FDB\u51FA\u63A9\u4F53 / \u8E72\u4F0F\u5207\u6362", "C / \u70B9\u6309 Ctrl", "RB / R3"], ["\u5DE6\u53F3\u63A2\u8EAB", "Z / X", "\u63A9\u4F53\u4E2D\u7784\u51C6\u63A2\u8EAB"], ["\u4E92\u52A8 / \u5F3A\u884C\u7834\u95E8", "F / Shift + F", "A / \u51B2\u523A\u65F6 A"], ["\u6295\u63B7 / \u5207\u6362\u6295\u63B7\u7269", "G / T", "LB / \u5341\u5B57\u952E\u53F3"], ["\u95EA\u5149\u5F39 / \u6CBB\u7597", "E / V", "\u5341\u5B57\u952E\u5DE6 / \u4E0A"], ["\u914D\u4EF6\u6574\u5907 / \u65E5\u5FD7", "Tab / M \u6216 L", "\u6682\u505C\u83DC\u5355 / View"], ["\u6682\u505C / \u8FD4\u56DE", "Esc / P", "Start / B"]];
+      const controls = [["\u79FB\u52A8 / \u8F6C\u52A8\u955C\u5934", "WASD / \u9F20\u6807\u79FB\u52A8", "\u5DE6 / \u53F3\u6447\u6746"], ["\u5F00\u706B / \u7CBE\u786E\u7784\u51C6", "\u9F20\u6807\u5DE6 / \u53F3\u952E", "RT / LT"], ["\u6362\u5F39 / \u5207\u6362\u6B66\u5668", "R / Q \u6216 1\u30012", "X / Y"], ["\u51B2\u523A / \u7FFB\u8D8A\u6216\u6ED1\u6B65", "Shift / Space", "\u6309\u4F4F L3 / B"], ["\u8FDB\u51FA\u63A9\u4F53 / \u8E72\u4F0F\u5207\u6362", "C / \u70B9\u6309 Ctrl", "RB / R3"], ["\u5DE6\u53F3\u63A2\u8EAB", "Z / X", "\u63A9\u4F53\u4E2D\u7784\u51C6\u63A2\u8EAB"], ["\u4E92\u52A8 / \u5F3A\u884C\u7834\u95E8", "F / Shift + F", "A / \u51B2\u523A\u65F6 A"], ["\u6295\u63B7 / \u5207\u6362\u6295\u63B7\u7269", "G / T", "LB / \u5341\u5B57\u952E\u53F3"], ["\u95EA\u5149\u5F39 / \u6CBB\u7597", "E / V", "\u5341\u5B57\u952E\u5DE6 / \u4E0A"], ["\u914D\u4EF6\u6574\u5907 / \u65E5\u5FD7", "Tab / M \u6216 L", "\u6682\u505C\u83DC\u5355 / View"], ["\u6682\u505C / \u8FD4\u56DE", "Esc / P", "Start / B"]];
       let content = "";
-      if (tab === "controls") content = `<article class="panel"><table class="control-table"><thead><tr><th>\u52A8\u4F5C</th><th>\u952E\u9F20</th><th>\u6807\u51C6\u624B\u67C4</th></tr></thead><tbody>${controls.map((row) => `<tr>${row.map((cell) => `<td>${esc(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table><p class="small muted" style="line-height:1.9;margin:20px 0 0">\u624B\u67C4\u8FDE\u63A5\u540E\u5148\u6309\u4EFB\u610F\u6309\u94AE\u3002\u83DC\u5355\u7528\u6447\u6746\u6216\u5341\u5B57\u952E\u9009\u62E9\uFF0CA \u786E\u8BA4\u3001B \u8FD4\u56DE\u3002\u9875\u9762\u5931\u7126\u4E0E\u624B\u67C4\u65AD\u5F00\u65F6\u6682\u505C\u3002\u952E\u9F20\uFF1A\u70B9\u51FB\u753B\u9762\u9501\u5B9A\u9F20\u6807\uFF0C\u79FB\u52A8\u9F20\u6807\u8F6C\u52A8\u8D8A\u80A9\u955C\u5934\uFF1BEsc \u91CA\u653E\u9F20\u6807\u5E76\u6682\u505C\u3002\u6D4F\u89C8\u5668\u672A\u5F00\u653E\u9F20\u6807\u9501\u5B9A\u65F6\uFF0C\u53EF\u6309\u4F4F\u53F3\u952E\u62D6\u52A8\u955C\u5934\u3002\u89E6\u5C4F\uFF1A\u5DE6\u4FA7\u6447\u6746\u79FB\u52A8\uFF0C\u53F3\u4FA7\u753B\u9762\u6ED1\u52A8\u8F6C\u52A8\u955C\u5934\uFF0C\u72EC\u7ACB\u5F00\u706B\u6309\u94AE\u6309\u4F4F\u5C04\u51FB\u3001\u677E\u5F00\u505C\u706B\u3002</p></article>`;
+      if (tab === "controls") content = `<article class="panel"><table class="control-table"><thead><tr><th>\u52A8\u4F5C</th><th>\u952E\u9F20</th><th>\u6807\u51C6\u624B\u67C4</th></tr></thead><tbody>${controls.map((row) => `<tr>${row.map((cell) => `<td>${esc(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table><p class="small muted" style="line-height:1.9;margin:20px 0 0">\u624B\u67C4\u8FDE\u63A5\u540E\u5148\u6309\u4EFB\u610F\u6309\u94AE\u3002\u83DC\u5355\u7528\u6447\u6746\u6216\u5341\u5B57\u952E\u9009\u62E9\uFF0CA \u786E\u8BA4\u3001B \u8FD4\u56DE\u3002\u9875\u9762\u5931\u7126\u4E0E\u624B\u67C4\u65AD\u5F00\u65F6\u6682\u505C\u3002\u952E\u9F20\uFF1A\u70B9\u51FB\u753B\u9762\u9501\u5B9A\u9F20\u6807\uFF0C\u79FB\u52A8\u9F20\u6807\u8F6C\u52A8\u7B2C\u4E00\u4EBA\u79F0\u89C6\u89D2\uFF1BEsc \u91CA\u653E\u9F20\u6807\u5E76\u6682\u505C\u3002\u6D4F\u89C8\u5668\u672A\u5F00\u653E\u9F20\u6807\u9501\u5B9A\u65F6\uFF0C\u53EF\u6309\u4F4F\u53F3\u952E\u62D6\u52A8\u955C\u5934\u3002\u89E6\u5C4F\uFF1A\u5DE6\u4FA7\u6447\u6746\u79FB\u52A8\uFF0C\u53F3\u4FA7\u753B\u9762\u6ED1\u52A8\u8F6C\u52A8\u955C\u5934\uFF0C\u72EC\u7ACB\u5F00\u706B\u6309\u94AE\u6309\u4F4F\u5C04\u51FB\u3001\u677E\u5F00\u505C\u706B\u3002</p></article>`;
       else if (tab === "enemies") content = `<div class="guide-grid">${Object.entries(ENEMY_TYPES).map(([id2, e]) => `<article class="guide-card"><span class="tag ${e.faction === "infected" ? "warm" : ""}">${esc(FACTIONS[e.faction] || e.faction)}</span><h3 style="margin-top:13px">${esc(e.name)}</h3><p>${esc(e.description || "\u89C2\u5BDF\u5176\u9884\u8B66\u4E0E\u884C\u52A8\u8282\u594F\uFF0C\u5229\u7528\u63A9\u4F53\u548C\u4FA7\u7FFC\u53D6\u5F97\u4F18\u52BF\u3002")}</p><p class="small muted">${esc(e.role || id2)} \xB7 ${e.range > 150 ? "\u8FDC\u7A0B\u5A01\u80C1" : "\u8FD1\u8DDD\u79BB\u5A01\u80C1"}</p></article>`).join("")}</div>`;
-      else content = `<div class="guide-grid"><article class="guide-card"><h3>01 / \u8BA9\u63A9\u4F53\u771F\u6B63\u6321\u4F4F\u5B50\u5F39</h3><p>\u8D8A\u80A9\u955C\u5934\u4E2D\u7528\u5C4F\u5E55\u4E2D\u592E\u51C6\u661F\u786E\u8BA4\u7784\u51C6\u65B9\u5411\u3002\u6309 C \u8FDB\u5165\u9644\u8FD1\u63A9\u4F53\uFF0C\u518D\u63A2\u8EAB\u5C04\u51FB\uFF1B\u9AD8\u5899\u9700\u8981\u7ED5\u89D2\uFF0C\u4F4E\u63A9\u4F53\u53EF\u4EE5\u62AC\u8EAB\u5F00\u706B\u3002\u7FFB\u8D8A\u4E0E\u6ED1\u6B65\u80FD\u76F4\u63A5\u6362\u4F4D\uFF0C\u9760\u8FD1\u7BB1\u5B50\u5E76\u4E0D\u4FDD\u8BC1\u67AA\u53E3\u5DF2\u79BB\u5F00\u906E\u6321\u3002</p></article><article class="guide-card"><h3>02 / \u67AA\u58F0\u662F\u4E00\u79CD\u9009\u62E9</h3><p>\u654C\u4EBA\u5206\u522B\u611F\u77E5\u89C6\u7EBF\u4E0E\u58F0\u97F3\u3002\u5B89\u4FDD\u4F1A\u5BFB\u627E\u63A9\u62A4\u3001\u538B\u5236\u548C\u5305\u6284\uFF1B\u611F\u67D3\u8005\u66F4\u5BB9\u6613\u8FFD\u9010\u54CD\u4EAE\u7684\u58F0\u6E90\u3002\u591A\u4E2A\u9635\u8425\u4F1A\u5F7C\u6B64\u4EA4\u6218\uFF0C\u5148\u89C2\u5BDF\u518D\u4ECB\u5165\u3002</p></article><article class="guide-card"><h3>03 / \u4E3A\u8DEF\u7EBF\u6539\u88C5\u6B66\u5668</h3><p>\u6D88\u58F0\u5668\u4FBF\u4E8E\u6F5C\u5165\uFF0C\u6269\u5BB9\u5323\u9002\u5408\u6301\u7EED\u4EA4\u706B\uFF0C\u7784\u5177\u548C\u63E1\u628A\u5E2E\u52A9\u63A7\u5236\u6563\u5E03\u3002\u914D\u4EF6\u6709\u660E\u786E\u53D6\u820D\u3002\u62C6\u5378\u8FD4\u56DE\u5E93\u5B58\uFF0C\u517C\u5BB9\u63A5\u53E3\u624D\u80FD\u5B89\u88C5\uFF0C\u6574\u5907\u4F1A\u6682\u505C\u884C\u52A8\u3002</p></article><article class="guide-card"><h3>04 / \u6295\u63B7\u7269\u6539\u53D8\u7A7A\u95F4</h3><p>\u70DF\u96FE\u5E2E\u52A9\u7A7F\u8FC7\u5371\u9669\u89C6\u7EBF\uFF0C\u95EA\u5149\u521B\u9020\u7834\u95E8\u548C\u6551\u63F4\u7A97\u53E3\uFF0C\u7206\u7834\u7269\u5904\u7406\u5BC6\u96C6\u5A01\u80C1\u3002\u5148\u786E\u8BA4\u843D\u70B9\u4E0E\u53CB\u65B9\u4F4D\u7F6E\uFF0C\u4FDD\u7559\u4E00\u79CD\u5E94\u6025\u624B\u6BB5\u3002</p></article><article class="guide-card"><h3>05 / \u76EE\u6807\u4F18\u5148\u4E8E\u6B7C\u706D</h3><p>\u4EFB\u52A1\u8981\u6C42\u53EF\u80FD\u662F\u65AD\u7535\u3001\u53D6\u5F97\u8BC1\u636E\u3001\u6551\u63F4\u6216\u6253\u5F00\u64A4\u79BB\u8DEF\u7EBF\u3002\u673A\u5173\u4F1A\u6539\u53D8\u95E8\u7981\u4E0E\u5730\u5F62\u3002\u63A2\u7D22\u8BC1\u636E\u53EF\u53D1\u73B0\u73B0\u573A\u6587\u6863\uFF0C\u53EF\u5373\u65F6\u6536\u8D77\u5E76\u56DE\u770B\u3002\u5DF2\u5B8C\u6210\u7684\u76EE\u6807\u4F1A\u4FDD\u5B58\uFF0C\u4E0D\u5FC5\u4E3A\u4E86\u6E05\u5149\u654C\u4EBA\u8017\u5C3D\u6240\u6709\u8D44\u6E90\u3002</p></article><article class="guide-card"><h3>06 / \u8D44\u6E90\u4E0E\u68C0\u67E5\u70B9</h3><p>\u88C5\u586B\u548C\u6CBB\u7597\u9700\u8981\u65F6\u95F4\uFF0C\u9009\u62E9\u5B89\u5168\u7A97\u53E3\u3002\u5B8C\u6210\u4EFB\u52A1\u91CC\u7A0B\u7891\u81EA\u52A8\u4FDD\u5B58\uFF1B\u5931\u8D25\u540E\u91CD\u8BD5\u5F53\u524D\u68C0\u67E5\u70B9\u3002\u4F4E\u96BE\u5EA6\u66F4\u5BBD\u88D5\uFF0C\u8C03\u6574\u96BE\u5EA6\u4E0D\u4F1A\u5220\u9664\u8FDB\u5EA6\u3002</p></article></div>`;
+      else content = `<div class="guide-grid"><article class="guide-card"><h3>01 / \u8BA9\u63A9\u4F53\u771F\u6B63\u6321\u4F4F\u5B50\u5F39</h3><p>\u7B2C\u4E00\u4EBA\u79F0\u89C6\u89D2\u4E2D\u7528\u5C4F\u5E55\u4E2D\u592E\u51C6\u661F\u786E\u8BA4\u7784\u51C6\u65B9\u5411\u3002\u6309 C \u8FDB\u5165\u9644\u8FD1\u63A9\u4F53\uFF0C\u518D\u63A2\u8EAB\u5C04\u51FB\uFF1B\u9AD8\u5899\u9700\u8981\u7ED5\u89D2\uFF0C\u4F4E\u63A9\u4F53\u53EF\u4EE5\u62AC\u8EAB\u5F00\u706B\u3002\u7FFB\u8D8A\u4E0E\u6ED1\u6B65\u80FD\u76F4\u63A5\u6362\u4F4D\uFF0C\u9760\u8FD1\u7BB1\u5B50\u5E76\u4E0D\u4FDD\u8BC1\u67AA\u53E3\u5DF2\u79BB\u5F00\u906E\u6321\u3002</p></article><article class="guide-card"><h3>02 / \u67AA\u58F0\u662F\u4E00\u79CD\u9009\u62E9</h3><p>\u654C\u4EBA\u5206\u522B\u611F\u77E5\u89C6\u7EBF\u4E0E\u58F0\u97F3\u3002\u5B89\u4FDD\u4F1A\u5BFB\u627E\u63A9\u62A4\u3001\u538B\u5236\u548C\u5305\u6284\uFF1B\u611F\u67D3\u8005\u66F4\u5BB9\u6613\u8FFD\u9010\u54CD\u4EAE\u7684\u58F0\u6E90\u3002\u591A\u4E2A\u9635\u8425\u4F1A\u5F7C\u6B64\u4EA4\u6218\uFF0C\u5148\u89C2\u5BDF\u518D\u4ECB\u5165\u3002</p></article><article class="guide-card"><h3>03 / \u4E3A\u8DEF\u7EBF\u6539\u88C5\u6B66\u5668</h3><p>\u6D88\u58F0\u5668\u4FBF\u4E8E\u6F5C\u5165\uFF0C\u6269\u5BB9\u5323\u9002\u5408\u6301\u7EED\u4EA4\u706B\uFF0C\u7784\u5177\u548C\u63E1\u628A\u5E2E\u52A9\u63A7\u5236\u6563\u5E03\u3002\u914D\u4EF6\u6709\u660E\u786E\u53D6\u820D\u3002\u62C6\u5378\u8FD4\u56DE\u5E93\u5B58\uFF0C\u517C\u5BB9\u63A5\u53E3\u624D\u80FD\u5B89\u88C5\uFF0C\u6574\u5907\u4F1A\u6682\u505C\u884C\u52A8\u3002</p></article><article class="guide-card"><h3>04 / \u6295\u63B7\u7269\u6539\u53D8\u7A7A\u95F4</h3><p>\u70DF\u96FE\u5E2E\u52A9\u7A7F\u8FC7\u5371\u9669\u89C6\u7EBF\uFF0C\u95EA\u5149\u521B\u9020\u7834\u95E8\u548C\u6551\u63F4\u7A97\u53E3\uFF0C\u7206\u7834\u7269\u5904\u7406\u5BC6\u96C6\u5A01\u80C1\u3002\u5148\u786E\u8BA4\u843D\u70B9\u4E0E\u53CB\u65B9\u4F4D\u7F6E\uFF0C\u4FDD\u7559\u4E00\u79CD\u5E94\u6025\u624B\u6BB5\u3002</p></article><article class="guide-card"><h3>05 / \u76EE\u6807\u4F18\u5148\u4E8E\u6B7C\u706D</h3><p>\u4EFB\u52A1\u8981\u6C42\u53EF\u80FD\u662F\u65AD\u7535\u3001\u53D6\u5F97\u8BC1\u636E\u3001\u6551\u63F4\u6216\u6253\u5F00\u64A4\u79BB\u8DEF\u7EBF\u3002\u673A\u5173\u4F1A\u6539\u53D8\u95E8\u7981\u4E0E\u5730\u5F62\u3002\u63A2\u7D22\u8BC1\u636E\u53EF\u53D1\u73B0\u73B0\u573A\u6587\u6863\uFF0C\u53EF\u5373\u65F6\u6536\u8D77\u5E76\u56DE\u770B\u3002\u5DF2\u5B8C\u6210\u7684\u76EE\u6807\u4F1A\u4FDD\u5B58\uFF0C\u4E0D\u5FC5\u4E3A\u4E86\u6E05\u5149\u654C\u4EBA\u8017\u5C3D\u6240\u6709\u8D44\u6E90\u3002</p></article><article class="guide-card"><h3>06 / \u8D44\u6E90\u4E0E\u68C0\u67E5\u70B9</h3><p>\u88C5\u586B\u548C\u6CBB\u7597\u9700\u8981\u65F6\u95F4\uFF0C\u9009\u62E9\u5B89\u5168\u7A97\u53E3\u3002\u5B8C\u6210\u4EFB\u52A1\u91CC\u7A0B\u7891\u81EA\u52A8\u4FDD\u5B58\uFF1B\u5931\u8D25\u540E\u91CD\u8BD5\u5F53\u524D\u68C0\u67E5\u70B9\u3002\u4F4E\u96BE\u5EA6\u66F4\u5BBD\u88D5\uFF0C\u8C03\u6574\u96BE\u5EA6\u4E0D\u4F1A\u5220\u9664\u8FDB\u5EA6\u3002</p></article></div>`;
       this.mount(`<section class="screen screen-scroll"><header class="section-head"><div><div class="eyebrow">FIELD MANUAL / \u968F\u8EAB\u6218\u672F\u624B\u518C</div><h2>\u5148\u770B\u6E05\uFF0C\u518D\u884C\u52A8\u3002</h2><p>\u6240\u6709\u6559\u7A0B\u53EF\u968F\u65F6\u91CD\u8BFB\uFF1B\u67E5\u770B\u624B\u518C\u65F6\u884C\u52A8\u6682\u505C\u3002</p></div><div class="head-actions">${button("guideBack", "\u8FD4\u56DE \u2192", "secondary", "data-autofocus")}</div></header><div class="journal-tabs">${button("guideTactics", "\u6218\u672F\u4E0E\u7CFB\u7EDF", tab === "tactics" ? "secondary active" : "secondary")}${button("guideControls", "\u5B8C\u6574\u64CD\u4F5C", tab === "controls" ? "secondary active" : "secondary")}${button("guideEnemies", "\u5BF9\u624B\u6863\u6848", tab === "enemies" ? "secondary active" : "secondary")}</div>${content}</section>`, "guide");
       this.on("guideBack", () => this.back());
       this.on("guideTactics", () => {
@@ -5819,7 +5819,7 @@
       const captureHint = $("mouseCaptureHint");
       if (captureHint) captureHint.hidden = !is3D || !playing || touch || device === "gamepad" || !!g.input?.pointerLocked || typeof g.input?.captureMouse !== "function";
       if (captureHint) {
-        const fallback = !!g.input?.lookFallback, button2 = $("captureMouseBtn"), label2 = fallback ? "\u91CD\u8BD5\u9F20\u6807\u9501\u5B9A " : "\u70B9\u51FB\u8FDB\u5165\u8D8A\u80A9\u7784\u51C6 ";
+        const fallback = !!g.input?.lookFallback, button2 = $("captureMouseBtn"), label2 = fallback ? "\u91CD\u8BD5\u9F20\u6807\u9501\u5B9A " : "\u70B9\u51FB\u8FDB\u5165\u7B2C\u4E00\u4EBA\u79F0\u7784\u51C6 ";
         if (button2?.firstChild && button2.firstChild.nodeValue !== label2) button2.firstChild.nodeValue = label2;
         const help = captureHint.querySelector(":scope > span"), message2 = fallback ? "\u62D6\u52A8\u6A21\u5F0F \xB7 \u6309\u4F4F\u53F3\u952E\u8F6C\u52A8\u955C\u5934\uFF0C\u5DE6\u952E\u5F00\u706B" : "\u79FB\u52A8\u9F20\u6807\u8F6C\u52A8\u955C\u5934 \xB7 Esc \u6682\u505C\u5E76\u91CA\u653E\u9F20\u6807";
         if (help && help.textContent !== message2) help.textContent = message2;
@@ -20214,7 +20214,7 @@ void main() {
       this.levelTextures = [];
       this.world = new ii();
       this.dynamic = new ii();
-      this.scene.add(this.world, this.dynamic);
+      this.scene.add(this.world, this.dynamic, this.camera);
       this.actorRenderGroup = new ii();
       this.scene.add(this.actorRenderGroup);
       this.actorBatches = /* @__PURE__ */ new Map();
@@ -20407,6 +20407,47 @@ void main() {
       this.textures.set(theme, texture);
       return texture;
     }
+    wallMaterial(theme, color) {
+      this.wallMaterials ||= /* @__PURE__ */ new Map();
+      const key = theme + ":" + color;
+      if (this.wallMaterials.has(key)) return this.wallMaterials.get(key);
+      const canvas2 = document.createElement("canvas");
+      canvas2.width = canvas2.height = 512;
+      const c = canvas2.getContext("2d"), rng = rand(hash2(key));
+      c.fillStyle = color;
+      c.fillRect(0, 0, 512, 512);
+      for (let i = 0; i < 6e3; i++) {
+        const x = rng() * 512, y = rng() * 512;
+        c.fillStyle = rng() > 0.5 ? "#ffffff09" : "#09161b0b";
+        c.fillRect(x, y, 1 + rng() * 4, 1 + rng() * 3);
+      }
+      c.strokeStyle = "#14293232";
+      c.lineWidth = 3;
+      for (let y = 0; y < 512; y += 128) {
+        c.beginPath();
+        c.moveTo(0, y);
+        c.lineTo(512, y);
+        c.stroke();
+        for (let x = y % 256 ? 128 : 0; x < 512; x += 256) {
+          c.beginPath();
+          c.moveTo(x, y);
+          c.lineTo(x, y + 128);
+          c.stroke();
+        }
+      }
+      c.fillStyle = "#1b303a70";
+      for (let y = 16; y < 512; y += 128) for (let x = 16; x < 512; x += 128) {
+        c.beginPath();
+        c.arc(x, y, 2, 0, TAU2);
+        c.fill();
+      }
+      const texture = new sh(canvas2);
+      texture.colorSpace = Xe;
+      texture.anisotropy = Math.min(4, this.webgl.capabilities.getMaxAnisotropy());
+      const material = this.softwareGPU ? new Bo({ map: texture }) : new Ur({ map: texture, roughness: 0.83, metalness: 0.04 });
+      this.wallMaterials.set(key, material);
+      return material;
+    }
     makeBackdrop() {
       this.world.clear();
       const p = SCENE_THEMES.command;
@@ -20490,6 +20531,7 @@ void main() {
       let color = kind === "cover" ? def.material === "wood" ? "#887550" : "#637a79" : def.material === "metal" ? "#71838b" : p.wall;
       const options = def.material === "glass" ? { color: "#a6d2d6", transparent: true, opacity: 0.34, roughness: 0.18, metalness: 0.25 } : {};
       const mesh = this.box(this.world, (d2.minX + d2.maxX) / 2, d2.height / 2, (d2.minZ + d2.maxZ) / 2, d2.maxX - d2.minX, d2.height, d2.maxZ - d2.minZ, color, options);
+      if (kind === "wall" && def.material !== "glass") mesh.material = this.wallMaterial(this.levelRef?.theme || "station", color);
       mesh.userData.kind = kind;
       mesh.userData.sourceId = def.id;
       const bounds = new we(v(d2.minX, 0, d2.minZ), v(d2.maxX, d2.height, d2.maxZ));
@@ -20859,6 +20901,14 @@ void main() {
       gun.add(muzzle);
       gun.userData.muzzle = muzzle;
       gun.userData.length = len;
+      for (let i = 0; i < 6; i++) this.box(gun, len * (0.32 + i * 0.065), 0.091, 0, 0.014, 0.018, 0.14, "#53666a", { metalness: 0.55, roughness: 0.42 });
+      this.box(gun, len * 0.32, -0.025, 0.051, len * 0.26, 0.055, 8e-3, "#556b6b", { metalness: 0.45, roughness: 0.55 });
+      this.box(gun, len * 0.34, 0.012, 0.057, 0.075, 0.012, 9e-3, "#c8b888", { metalness: 0.5, roughness: 0.35 });
+      this.box(gun, len * 0.13, -0.105, 0.034, 0.035, 0.13, 0.012, "#182d36");
+      if (!short) {
+        this.box(gun, -0.21, -0.02, 0, 0.11, 0.16, 0.13, "#263d47");
+        this.box(gun, len * 0.72, -0.04, 0, 0.15, 0.035, 0.12, "#536861");
+      }
       return gun;
     }
     createActor(a, player = false) {
@@ -21058,35 +21108,42 @@ void main() {
       }
     }
     updateCamera(g) {
-      const p = g.player, ads = clamp5(p.aimBlend || 0, 0, 1), crouch = p.stance === "crouch", height = crouch ? 1.62 : 2.1, back = 3.6 - ads * 1.55, side = 0.85 - ads * 0.3, angle = p.angle || 0, pitch = clamp5(p.pitch || 0, -1.08, 1.08), forward = v(Math.cos(angle), 0, Math.sin(angle)), right = v(-Math.sin(angle), 0, Math.cos(angle)), base2 = v(p.x * S, 0, p.y * S), anchor = base2.clone().add(v(0, crouch ? 1.1 : 1.5, 0)), desired = base2.clone().addScaledVector(forward, -back).addScaledVector(right, side).add(v(0, height - ads * 0.25, 0));
-      const delta = desired.clone().sub(anchor), length = delta.length(), direction = delta.normalize();
-      let allowed = length;
-      const ray = this.cameraRay;
-      ray.origin.copy(anchor);
-      ray.direction.copy(direction);
-      const expanded = new we(), hit = v();
-      for (const record2 of this.colliders) {
-        if (!record2.collidable) continue;
-        expanded.copy(record2.bounds).expandByScalar(0.16);
-        if (expanded.containsPoint(anchor)) {
-          allowed = Math.min(allowed, 0.18);
-          continue;
-        }
-        if (ray.intersectBox(expanded, hit)) {
-          const distance2 = hit.distanceTo(anchor);
-          if (distance2 <= length) allowed = Math.min(allowed, Math.max(0.16, distance2 - 0.1));
-        }
-      }
-      this.camera.position.copy(anchor).addScaledVector(direction, allowed);
-      const aimDirection = v(Math.cos(angle) * Math.cos(pitch), Math.sin(pitch), Math.sin(angle) * Math.cos(pitch)), target = base2.clone().add(v(0, crouch ? 1.03 : 1.3, 0)).addScaledVector(aimDirection, 12);
-      this.camera.lookAt(target);
-      this.camera.fov = 64 - ads * 12;
+      const p = g.player, ads = clamp5(p.aimBlend || 0, 0, 1), angle = p.angle || 0, pitch = clamp5(p.pitch || 0, -1.08, 1.08), height = p.stance === "crouch" ? 1.05 : 1.58;
+      this.camera.position.set(p.x * S, height, p.y * S);
+      const direction = v(Math.cos(angle) * Math.cos(pitch), Math.sin(pitch), Math.sin(angle) * Math.cos(pitch));
+      this.camera.lookAt(this.camera.position.clone().add(direction));
+      this.camera.fov = 70 - ads * 13;
       this.camera.updateProjectionMatrix();
       this.camera.updateMatrixWorld(true);
-      const cameraDirection = this.camera.getWorldDirection(v());
-      this.cameraData = { x: this.camera.position.x / S, y: this.camera.position.z / S, height: this.camera.position.y, heightMeters: this.camera.position.y, dirX: cameraDirection.x, dirY: cameraDirection.z, dirHeight: cameraDirection.y, fov: this.camera.fov, viewportWidth: this.width, viewportHeight: this.height, collisionDistance: allowed, desiredDistance: length };
+      this.cameraData = { x: p.x, y: p.y, height, heightMeters: height, dirX: direction.x, dirY: direction.z, dirHeight: direction.y, fov: this.camera.fov, viewportWidth: this.width, viewportHeight: this.height, collisionDistance: 0, desiredDistance: 0 };
       g.camera3D = this.cameraData;
       this.camera3D = this.camera;
+    }
+    updateViewWeapon(g) {
+      const id2 = g.weapon || g.profile?.loadout?.[g.player.weaponIndex || 0] || "arclight", fit = g.profile?.fittings?.[id2] || {}, key = id2 + JSON.stringify(fit);
+      if (!this.viewWeapon || this.viewWeaponKey !== key) {
+        if (this.viewWeapon) this.camera.remove(this.viewWeapon);
+        this.viewWeapon = this.buildWeapon(id2, fit);
+        this.viewWeapon.rotation.y = Math.PI / 2;
+        this.viewWeapon.scale.setScalar(0.82);
+        this.camera.add(this.viewWeapon);
+        if (!this.viewArms) {
+          this.viewArms = new ii();
+          this.bone(this.viewArms, [0.43, -0.48, -0.2], [0.28, -0.3, -0.48], 0.075, "#526a70");
+          this.bone(this.viewArms, [-0.34, -0.48, -0.25], [0.11, -0.31, -0.77], 0.07, "#526a70");
+          this.sphere(this.viewArms, 0.28, -0.3, -0.48, 0.075, "#303f42");
+          this.sphere(this.viewArms, 0.11, -0.31, -0.77, 0.075, "#303f42");
+          this.box(this.viewArms, 0.28, -0.3, -0.48, 0.14, 0.09, 0.12, "#374c4e");
+          this.box(this.viewArms, 0.11, -0.31, -0.77, 0.15, 0.09, 0.12, "#374c4e");
+          this.camera.add(this.viewArms);
+        }
+        this.viewWeaponKey = key;
+      }
+      const ads = clamp5(g.player.aimBlend || 0, 0, 1), recoil = g.player.recoil || 0;
+      this.viewWeapon.position.set(0.27 - ads * 0.17, -0.25 + ads * 0.06, -0.62 + recoil * 0.025);
+      this.viewArms.visible = true;
+      this.viewWeapon.rotation.z = g.player.action?.type === "reload" ? -0.4 : 0;
+      this.viewWeapon.visible = true;
     }
     prepareAim(g) {
       if (!g?.level || !g.player) return null;
@@ -21106,6 +21163,7 @@ void main() {
       }
       this.dynamic.updateMatrixWorld(true);
       this.updateCamera(g);
+      this.updateViewWeapon(g);
       this.raycaster.setFromCamera(this.center, this.camera);
       const aimMeshes = [...this.solidAim];
       for (const [id2, model] of this.actorMap) if (id2 !== "player" && !model.friendly && model.group.visible) aimMeshes.push(model.hitbox);
@@ -21183,6 +21241,12 @@ void main() {
       this.actorFrustum.setFromProjectionMatrix(this.actorProjection);
       const sphere = new be();
       for (const model of this.actorMap.values()) {
+        if (model.player) {
+          model.group.traverse((part) => {
+            if (part.isMesh) part.visible = false;
+          });
+          continue;
+        }
         if (!model.group.visible) continue;
         sphere.center.copy(model.group.position);
         sphere.center.y += model.metrics.height * 0.5;
@@ -21472,6 +21536,8 @@ void main() {
           this.levelRef = null;
           this.makeBackdrop();
         }
+        if (this.viewWeapon) this.viewWeapon.visible = false;
+        if (this.viewArms) this.viewArms.visible = false;
         this.camera.position.set(-18 + Math.sin(this.time * 0.035) * 2, 17, 28);
         this.camera.lookAt(0, 5, 0);
         this.webgl.render(this.scene, this.camera);
