@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "kind": "Model upgrade regression and controlled visual samples",
+  "sourceSha256": "6609c7830eddc206b2e4340e1819886edfb696dde197536c896845d359b28bd2",
+  "standaloneSha256": "bf3062a7c3ff998a7bc7844323c750f3f493949946bee49f0c68224478e088ab",
+  "regression": {
+    "command": "npm test",
+    "tests": 192,
+    "passed": 192,
+    "failed": 0,
+    "skipped": 0,
+    "durationMs": 478343.779366,
+    "logSha256": "32dfacd588711149e0c2936cacde69558d346d3e9694a8a54e9917a74d56fe29"
+  },
+  "visualSamples": {
+    "description": "Actual WebGL captures at the user-selectable high quality setting; opponents and placements controlled for art review. Not natural campaign evidence.",
+    "pageErrors": [],
+    "renderSamples": [
+      {
+        "quality": "auto",
+        "meanFrameMs": 54.202499999990685,
+        "averageFps": 18.44933351782984,
+        "p95FrameMs": 62.5,
+        "frames": 40,
+        "framebuffer": [
+          632,
+          395
+        ],
+        "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "triangles": 20354,
+        "drawCalls": 85,
+        "method": "Actual game render calls in a controlled training scene with opponents removed for art review; not combat, natural campaign time or a hardware GPU benchmark"
+      },
+      {
+        "quality": "high",
+        "meanFrameMs": 159.40999999999767,
+        "averageFps": 6.273132174895017,
+        "p95FrameMs": 215.10000000009313,
+        "frames": 40,
+        "framebuffer": [
+          1440,
+          900
+        ],
+        "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "triangles": 29534,
+        "drawCalls": 85,
+        "method": "Actual game render calls in a controlled training scene with opponents removed for art review; not combat, natural campaign time or a hardware GPU benchmark"
+      }
+    ]
+  },
+  "limitations": [
+    "Programmatic simplified models; AAA visual quality has not been achieved.",
+    "Short samples use Chromium SwiftShader software rendering, not hardware GPU measurements or combat benchmarks.",
+    "High quality is slow in this software renderer.",
+    "No complete 18-chapter natural playthrough for this exact revision."
+  ]
+}

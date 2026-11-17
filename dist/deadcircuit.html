@@ -305,13 +305,13 @@
     wall(l, "edge-e", width - 32, 0, 32, height);
     return l;
   }
-  function wall(l, id2, x, y, w, h, material = "concrete", extra = {}) {
-    const a = { id: id2, x, y, w, h, material, active: true, ...extra };
+  function wall(l, id2, x, y, w, h, material2 = "concrete", extra = {}) {
+    const a = { id: id2, x, y, w, h, material: material2, active: true, ...extra };
     l.walls.push(a);
     return a;
   }
-  function cover(l, id2, x, y, w, h, material = "metal", extra = {}) {
-    const a = { id: id2, x, y, w, h, low: true, hp: material === "wood" ? 100 : 240, material, active: true, ...extra };
+  function cover(l, id2, x, y, w, h, material2 = "metal", extra = {}) {
+    const a = { id: id2, x, y, w, h, low: true, hp: material2 === "wood" ? 100 : 240, material: material2, active: true, ...extra };
     l.covers.push(a);
     return a;
   }
@@ -1085,16 +1085,16 @@
       return { id: index, title, description, targets, checkpoint: true, reinforcements: response };
     });
   }
-  function tacticalFurniture(level, id2, type, x, y, w, h, material = "metal", low = true) {
+  function tacticalFurniture(level, id2, type, x, y, w, h, material2 = "metal", low = true) {
     const rect = { x, y, w, h };
     const overlap = (o) => rect.x < o.x + o.w + 24 && rect.x + rect.w + 24 > o.x && rect.y < o.y + o.h + 24 && rect.y + rect.h + 24 > o.y;
     if (movementObstacles(level).some(overlap)) return;
     if (level.objects.some((o) => circleRect({ ...o, r: 78 }, rect)) || circleRect({ ...level.spawn, r: 100 }, rect) || circleRect({ ...level.exit, r: 100 }, rect)) return;
-    cover(level, id2, x, y, w, h, material, { low });
+    cover(level, id2, x, y, w, h, material2, { low });
     prop(level, type, x, y, w, h);
   }
   function refineArchitecture(l) {
-    const furniture = (id2, type, x, y, w, h, material = "metal", low = true) => tacticalFurniture(l, id2, type, x, y, w, h, material, low);
+    const furniture = (id2, type, x, y, w, h, material2 = "metal", low = true) => tacticalFurniture(l, id2, type, x, y, w, h, material2, low);
     if (l.id === 0) {
       for (const [i, x] of [400, 1050, 2770, 3480].entries()) {
         furniture("ticket-kiosk-" + i, "console", x, 900, 110, 90);
@@ -3340,7 +3340,7 @@
       this.canvas = canvas2;
       this.mode = "menu";
       this.audio = new AudioEngine();
-      this.settings = { difficulty: "standard", mute: false, reducedMotion: false, reduced: false, screenShake: true, deadzone: 0.18, aimAssist: true, subtitles: true, minimap: true, largeText: false, mouseSensitivity: 26e-4, touchSensitivity: 52e-4, lookSensitivity: 1, invertY: false };
+      this.settings = { difficulty: "standard", mute: false, reducedMotion: false, reduced: false, screenShake: true, deadzone: 0.18, aimAssist: true, subtitles: true, minimap: true, largeText: false, mouseSensitivity: 26e-4, touchSensitivity: 52e-4, lookSensitivity: 1, invertY: false, graphicsQuality: "auto" };
       this.profile = this.freshProfile();
       this.campaign = this.freshCampaign();
       this.level = null;
@@ -3373,6 +3373,7 @@
         const s36 = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null");
         if (s36 && typeof s36 === "object") {
           for (const k of ["mute", "reducedMotion", "screenShake", "aimAssist", "subtitles", "largeText", "minimap", "reduced", "invertY"]) if (typeof s36[k] === "boolean") this.settings[k] = s36[k];
+          if (["auto", "high", "performance"].includes(s36.graphicsQuality)) this.settings.graphicsQuality = s36.graphicsQuality;
           if (["story", "standard", "tactical"].includes(s36.difficulty)) this.settings.difficulty = s36.difficulty;
           if (["story", "standard", "tactical"].includes(s36.preferredDifficulty)) this.settings.preferredDifficulty = s36.preferredDifficulty;
           if (Number.isFinite(s36.deadzone)) this.settings.deadzone = clamp(s36.deadzone, 0.08, 0.4);
@@ -3477,7 +3478,9 @@
     }
     setSetting(key, value) {
       if (["mute", "reducedMotion", "screenShake", "aimAssist", "subtitles", "largeText", "minimap", "reduced", "invertY"].includes(key)) this.settings[key] = !!value;
-      else if (key === "deadzone") this.settings.deadzone = clamp(Number(value) || 0.18, 0.08, 0.4);
+      else if (key === "graphicsQuality") {
+        if (["auto", "high", "performance"].includes(value)) this.settings.graphicsQuality = value;
+      } else if (key === "deadzone") this.settings.deadzone = clamp(Number(value) || 0.18, 0.08, 0.4);
       else if (["mouseSensitivity", "touchSensitivity", "lookSensitivity"].includes(key)) {
         const limits = { mouseSensitivity: [5e-4, 0.012], touchSensitivity: [1e-3, 0.02], lookSensitivity: [0.25, 3] };
         this.settings[key] = clamp(finite(Number(value), this.settings[key]), ...limits[key]);
@@ -4831,10 +4834,10 @@
       if (def && (def.active === false || def.destroyed || Number.isFinite(def.hp) && def.hp <= 0 || collider.kind === "door" && def.open)) continue;
       if (!def && collider.collidable === false) continue;
       const bounds = collider.bounds;
-      const box = def ? { minX: def.x, maxX: def.x + def.w, minY: def.y, maxY: def.y + def.h, minH: 0, maxH: collider.height || (collider.kind === "cover" ? def.low === false ? 2.3 : 1.05 : 3.2) } : bounds ? { minX: bounds.min.x / scale, maxX: bounds.max.x / scale, minY: bounds.min.z / scale, maxY: bounds.max.z / scale, minH: bounds.min.y, maxH: bounds.max.y } : null;
-      if (!box) continue;
+      const box2 = def ? { minX: def.x, maxX: def.x + def.w, minY: def.y, maxY: def.y + def.h, minH: 0, maxH: collider.height || (collider.kind === "cover" ? def.low === false ? 2.3 : 1.05 : 3.2) } : bounds ? { minX: bounds.min.x / scale, maxX: bounds.max.x / scale, minY: bounds.min.z / scale, maxY: bounds.max.z / scale, minH: bounds.min.y, maxH: bounds.max.y } : null;
+      if (!box2) continue;
       let near = 0, far = 1, intersects = true;
-      for (const [key, min, max] of [["x", box.minX, box.maxX], ["y", box.minY, box.maxY], ["height", box.minH, box.maxH]]) {
+      for (const [key, min, max] of [["x", box2.minX, box2.maxX], ["y", box2.minY, box2.maxY], ["height", box2.minH, box2.maxH]]) {
         const start = from[key], delta = to[key] - start;
         if (Math.abs(delta) < 1e-10) {
           if (start < min || start > max) {
@@ -5408,8 +5411,8 @@
     if (short) {
       shape = '<path d="M55 56H187L197 63V82H119L107 123H77L85 82H55Z" fill="#2c414e" stroke="#91a6aa" stroke-width="2"/><path d="M58 57H187V73H58Z" fill="' + color + '"/><path d="M88 88H112L102 117H80Z" fill="#5c6f73"/><path d="M120 82V97H103" fill="none" stroke="#91a6aa" stroke-width="3"/><path d="M70 61V70M78 61V70M86 61V70" stroke="#3c535e" stroke-width="3"/>';
     } else {
-      const barrel = long2 ? 302 : family === "smg" ? 247 : 278;
-      shape = `<path d="M23 73L67 59L84 67L83 88L36 103L25 97Z" fill="#3a505b" stroke="#8ca3a7" stroke-width="2"/><path d="M78 61H${family === "bullpup" ? 210 : 193}L210 72V87H78Z" fill="${color}" stroke="#bfd0c5" stroke-width="1.5"/><path d="M174 65H253V83H176Z" fill="#344b57"/><path d="M239 70H${barrel}V77H239Z" fill="#96a9ac"/><path d="M${barrel - 4} 67H${barrel + 4}V81H${barrel - 4}Z" fill="#3b525d"/><path d="M103 86L126 88L118 120L97 116Z" fill="#3e545b"/><path d="M131 85L160 87L171 117L145 124Z" fill="#657873" stroke="#9cafab" stroke-width="1.5"/><path d="M123 89V104H139" fill="none" stroke="#9cafab" stroke-width="2"/><path d="M88 65H179M182 69H231" stroke="#d7ddcb" stroke-opacity=".5" stroke-width="2"/><path d="M189 76V82M199 76V82M209 76V82M219 76V82" stroke="#131f2b" stroke-width="3"/>`;
+      const barrel2 = long2 ? 302 : family === "smg" ? 247 : 278;
+      shape = `<path d="M23 73L67 59L84 67L83 88L36 103L25 97Z" fill="#3a505b" stroke="#8ca3a7" stroke-width="2"/><path d="M78 61H${family === "bullpup" ? 210 : 193}L210 72V87H78Z" fill="${color}" stroke="#bfd0c5" stroke-width="1.5"/><path d="M174 65H253V83H176Z" fill="#344b57"/><path d="M239 70H${barrel2}V77H239Z" fill="#96a9ac"/><path d="M${barrel2 - 4} 67H${barrel2 + 4}V81H${barrel2 - 4}Z" fill="#3b525d"/><path d="M103 86L126 88L118 120L97 116Z" fill="#3e545b"/><path d="M131 85L160 87L171 117L145 124Z" fill="#657873" stroke="#9cafab" stroke-width="1.5"/><path d="M123 89V104H139" fill="none" stroke="#9cafab" stroke-width="2"/><path d="M88 65H179M182 69H231" stroke="#d7ddcb" stroke-opacity=".5" stroke-width="2"/><path d="M189 76V82M199 76V82M209 76V82M219 76V82" stroke="#131f2b" stroke-width="3"/>`;
       if (id2 === "trident") shape += '<path d="M275 63H292V68H275ZM275 79H292V84H275ZM31 78H72V88H31Z" fill="#789297"/><path d="M90 57H169V61H90Z" fill="#b1b68d"/>';
       if (id2 === "cyclone12") shape += '<circle cx="152" cy="104" r="23" fill="#405660" stroke="#a5b3a7" stroke-width="2"/><circle cx="152" cy="104" r="13" fill="#6e827e"/>';
       if (id2 === "longwatch") shape += '<path d="M274 70H322V76H274Z" fill="#93a8a8"/><path d="M256 81L242 110M256 81L270 110" stroke="#b5c1ac" stroke-width="2.5"/>';
@@ -5747,12 +5750,13 @@
         const current = Number.isFinite(s36[key]) ? s36[key] : fallback, custom = !values.some((v2) => Math.abs(v2 - current) < 1e-7);
         return `<div class="settings-row"><div><strong>${title}</strong><small>${description}</small></div><select id="${id2}" aria-label="${title}">${values.map((value, i) => `<option value="${value}" ${Math.abs(current - value) < 1e-7 ? "selected" : ""}>${["\u4F4E", "\u6807\u51C6", "\u9AD8", "\u5F88\u9AD8"][i]}</option>`).join("")}${custom ? `<option value="${current}" selected>\u81EA\u5B9A\u4E49</option>` : ""}</select></div>`;
       };
-      this.mount(`<section class="screen screen-narrow screen-scroll"><header class="section-head"><div><div class="eyebrow">PERSONAL CONFIGURATION / \u4E2A\u4EBA\u8BBE\u7F6E</div><h2>\u6309\u81EA\u5DF1\u7684\u8282\u594F\u884C\u52A8\u3002</h2></div></header><div class="panel"><div class="settings-row"><div><strong>\u884C\u52A8\u96BE\u5EA6</strong><small>\u968F\u65F6\u8C03\u6574\uFF0C\u4FDD\u7559\u6218\u5F79\u8FDB\u5EA6\u3002</small></div><select id="settingsDifficulty" aria-label="\u884C\u52A8\u96BE\u5EA6">${Object.entries(DIFFICULTIES).map(([id2, title]) => `<option value="${id2}" ${s36.difficulty === id2 ? "selected" : ""}>${title}</option>`).join("")}</select></div>${sensitivity("mouseSensitivity", "settingsMouseSensitivity", "\u9F20\u6807\u955C\u5934\u7075\u654F\u5EA6", "\u8C03\u6574\u79FB\u52A8\u9F20\u6807\u65F6\u8F6C\u52A8\u7B2C\u4E00\u4EBA\u79F0\u89C6\u89D2\u7684\u901F\u5EA6\u3002", [17e-4, 26e-4, 36e-4, 47e-4], 26e-4)}${sensitivity("lookSensitivity", "settingsLookSensitivity", "\u624B\u67C4\u955C\u5934\u7075\u654F\u5EA6", "\u8C03\u6574\u53F3\u6447\u6746\u7684\u955C\u5934\u8F6C\u52A8\u901F\u5EA6\u3002", [0.65, 1, 1.4, 1.8], 1)}${sensitivity("touchSensitivity", "settingsTouchSensitivity", "\u89E6\u5C4F\u955C\u5934\u7075\u654F\u5EA6", "\u8C03\u6574\u53F3\u4FA7\u6ED1\u52A8\u65F6\u7684\u955C\u5934\u8F6C\u52A8\u901F\u5EA6\u3002", [34e-4, 52e-4, 73e-4, 94e-4], 52e-4)}${toggle("invertY", "\u53CD\u8F6C\u5782\u76F4\u89C6\u89D2", "\u540C\u65F6\u4F5C\u7528\u4E8E\u9F20\u6807\u3001\u6447\u6746\u4E0E\u89E6\u5C4F\u7684\u4E0A\u4E0B\u89C6\u89D2\u3002")}${toggle("mute", "\u9759\u97F3", "\u5173\u95ED\u97F3\u4E50\u4E0E\u97F3\u6548\u3002\u9996\u6B21\u4EA4\u4E92\u540E\u6D4F\u89C8\u5668\u624D\u4F1A\u5141\u8BB8\u64AD\u653E\u58F0\u97F3\u3002")}${toggle("reduced", "\u51CF\u5C11\u52A8\u6001\u6548\u679C", "\u51CF\u5C11\u9707\u52A8\u3001\u5C4F\u5E55\u95EA\u5149\u548C\u754C\u9762\u52A8\u753B\u3002")}${toggle("largeText", "\u653E\u5927\u5267\u60C5\u5B57\u5E55", "\u63D0\u9AD8\u5BF9\u8BDD\u4E0E\u56DE\u4FE1\u7684\u6587\u5B57\u5927\u5C0F\u3002")}${toggle("minimap", "\u6218\u672F\u5C0F\u5730\u56FE", "\u684C\u9762\u7AEF\u663E\u793A\u76EE\u6807\u4F4D\u7F6E\u4E0E\u533A\u57DF\u5E03\u5C40\u3002")}${toggle("aimAssist", "\u624B\u67C4\u8F85\u52A9\u7784\u51C6", "\u5E2E\u52A9\u7A33\u5B9A\u63A5\u8FD1\u53EF\u89C1\u76EE\u6807\u7684\u7784\u51C6\u3002")}<div class="settings-row"><div><strong>\u624B\u67C4\u6447\u6746\u6B7B\u533A</strong><small>\u6447\u6746\u6F02\u79FB\u65F6\u63D0\u9AD8\uFF1B\u5C0F\u5E45\u64CD\u4F5C\u4E0D\u7075\u654F\u65F6\u964D\u4F4E\u3002</small></div><select id="deadzoneSetting" aria-label="\u6447\u6746\u6B7B\u533A">${[0.12, 0.18, 0.24, 0.3].map((v2) => `<option value="${v2}" ${Math.abs((s36.deadzone ?? 0.18) - v2) < 0.01 ? "selected" : ""}>${Math.round(v2 * 100)}%</option>`).join("")}</select></div><div class="actions">${button("settingsBack", "\u4FDD\u5B58\u8BBE\u7F6E\u5E76\u8FD4\u56DE \u2192", "primary", "data-autofocus")}</div><p class="small muted" style="line-height:1.8">\u8BBE\u7F6E\u4E0E\u6E38\u620F\u8FDB\u5EA6\u4EC5\u4FDD\u5B58\u5728\u5F53\u524D\u6D4F\u89C8\u5668\u3002\u6CA1\u6709\u8D26\u53F7\u3001\u5728\u7EBF\u6392\u884C\u699C\u6216\u8FDC\u7AEF\u5B58\u6863\u3002</p></div></section>`, "settings");
+      this.mount(`<section class="screen screen-narrow screen-scroll"><header class="section-head"><div><div class="eyebrow">PERSONAL CONFIGURATION / \u4E2A\u4EBA\u8BBE\u7F6E</div><h2>\u6309\u81EA\u5DF1\u7684\u8282\u594F\u884C\u52A8\u3002</h2></div></header><div class="panel"><div class="settings-row"><div><strong>\u884C\u52A8\u96BE\u5EA6</strong><small>\u968F\u65F6\u8C03\u6574\uFF0C\u4FDD\u7559\u6218\u5F79\u8FDB\u5EA6\u3002</small></div><select id="settingsDifficulty" aria-label="\u884C\u52A8\u96BE\u5EA6">${Object.entries(DIFFICULTIES).map(([id2, title]) => `<option value="${id2}" ${s36.difficulty === id2 ? "selected" : ""}>${title}</option>`).join("")}</select></div><div class="settings-row"><div><strong>\u753B\u9762\u7CBE\u5EA6</strong><small>\u9AD8\u753B\u8D28\u4FDD\u7559\u8FD1\u666F\u7EC6\u8282\uFF1B\u5361\u987F\u65F6\u9009\u62E9\u6D41\u7545\u6216\u81EA\u52A8\u3002</small></div><select id="graphicsQualitySetting" aria-label="\u753B\u9762\u7CBE\u5EA6">${[["auto", "\u81EA\u52A8"], ["high", "\u9AD8\u753B\u8D28"], ["performance", "\u6D41\u7545"]].map(([id2, title]) => `<option value="${id2}" ${(s36.graphicsQuality || "auto") === id2 ? "selected" : ""}>${title}</option>`).join("")}</select></div>${sensitivity("mouseSensitivity", "settingsMouseSensitivity", "\u9F20\u6807\u955C\u5934\u7075\u654F\u5EA6", "\u8C03\u6574\u79FB\u52A8\u9F20\u6807\u65F6\u8F6C\u52A8\u7B2C\u4E00\u4EBA\u79F0\u89C6\u89D2\u7684\u901F\u5EA6\u3002", [17e-4, 26e-4, 36e-4, 47e-4], 26e-4)}${sensitivity("lookSensitivity", "settingsLookSensitivity", "\u624B\u67C4\u955C\u5934\u7075\u654F\u5EA6", "\u8C03\u6574\u53F3\u6447\u6746\u7684\u955C\u5934\u8F6C\u52A8\u901F\u5EA6\u3002", [0.65, 1, 1.4, 1.8], 1)}${sensitivity("touchSensitivity", "settingsTouchSensitivity", "\u89E6\u5C4F\u955C\u5934\u7075\u654F\u5EA6", "\u8C03\u6574\u53F3\u4FA7\u6ED1\u52A8\u65F6\u7684\u955C\u5934\u8F6C\u52A8\u901F\u5EA6\u3002", [34e-4, 52e-4, 73e-4, 94e-4], 52e-4)}${toggle("invertY", "\u53CD\u8F6C\u5782\u76F4\u89C6\u89D2", "\u540C\u65F6\u4F5C\u7528\u4E8E\u9F20\u6807\u3001\u6447\u6746\u4E0E\u89E6\u5C4F\u7684\u4E0A\u4E0B\u89C6\u89D2\u3002")}${toggle("mute", "\u9759\u97F3", "\u5173\u95ED\u97F3\u4E50\u4E0E\u97F3\u6548\u3002\u9996\u6B21\u4EA4\u4E92\u540E\u6D4F\u89C8\u5668\u624D\u4F1A\u5141\u8BB8\u64AD\u653E\u58F0\u97F3\u3002")}${toggle("reduced", "\u51CF\u5C11\u52A8\u6001\u6548\u679C", "\u51CF\u5C11\u9707\u52A8\u3001\u5C4F\u5E55\u95EA\u5149\u548C\u754C\u9762\u52A8\u753B\u3002")}${toggle("largeText", "\u653E\u5927\u5267\u60C5\u5B57\u5E55", "\u63D0\u9AD8\u5BF9\u8BDD\u4E0E\u56DE\u4FE1\u7684\u6587\u5B57\u5927\u5C0F\u3002")}${toggle("minimap", "\u6218\u672F\u5C0F\u5730\u56FE", "\u684C\u9762\u7AEF\u663E\u793A\u76EE\u6807\u4F4D\u7F6E\u4E0E\u533A\u57DF\u5E03\u5C40\u3002")}${toggle("aimAssist", "\u624B\u67C4\u8F85\u52A9\u7784\u51C6", "\u5E2E\u52A9\u7A33\u5B9A\u63A5\u8FD1\u53EF\u89C1\u76EE\u6807\u7684\u7784\u51C6\u3002")}<div class="settings-row"><div><strong>\u624B\u67C4\u6447\u6746\u6B7B\u533A</strong><small>\u6447\u6746\u6F02\u79FB\u65F6\u63D0\u9AD8\uFF1B\u5C0F\u5E45\u64CD\u4F5C\u4E0D\u7075\u654F\u65F6\u964D\u4F4E\u3002</small></div><select id="deadzoneSetting" aria-label="\u6447\u6746\u6B7B\u533A">${[0.12, 0.18, 0.24, 0.3].map((v2) => `<option value="${v2}" ${Math.abs((s36.deadzone ?? 0.18) - v2) < 0.01 ? "selected" : ""}>${Math.round(v2 * 100)}%</option>`).join("")}</select></div><div class="actions">${button("settingsBack", "\u4FDD\u5B58\u8BBE\u7F6E\u5E76\u8FD4\u56DE \u2192", "primary", "data-autofocus")}</div><p class="small muted" style="line-height:1.8">\u8BBE\u7F6E\u4E0E\u6E38\u620F\u8FDB\u5EA6\u4EC5\u4FDD\u5B58\u5728\u5F53\u524D\u6D4F\u89C8\u5668\u3002\u6CA1\u6709\u8D26\u53F7\u3001\u5728\u7EBF\u6392\u884C\u699C\u6216\u8FDC\u7AEF\u5B58\u6863\u3002</p></div></section>`, "settings");
       this.overlay.querySelectorAll("[data-setting]").forEach((el2) => el2.onclick = () => {
         g.setSetting(el2.dataset.setting, !s36[el2.dataset.setting]);
         this.settings();
       });
       $("settingsDifficulty").onchange = (e) => g.setDifficulty(e.target.value);
+      $("graphicsQualitySetting").onchange = (e) => g.setSetting("graphicsQuality", e.target.value);
       $("deadzoneSetting").onchange = (e) => g.setSetting("deadzone", Number(e.target.value));
       for (const [key, id2] of [["mouseSensitivity", "settingsMouseSensitivity"], ["lookSensitivity", "settingsLookSensitivity"], ["touchSensitivity", "settingsTouchSensitivity"]]) $(id2).onchange = (event) => g.setSetting(key, Number(event.target.value));
       this.on("settingsBack", () => this.back());
@@ -20141,6 +20145,322 @@ void main() {
      *)
   */
 
+  // deadcircuit/model-art.js
+  function shapes(r) {
+    if (r.artShapes) return r.artShapes;
+    const box2 = new Ui(1, 1, 1, 2, 2, 2), p = box2.attributes.position;
+    const a = new C(), b = new C();
+    for (let i = 0; i < p.count; i++) {
+      a.fromBufferAttribute(p, i);
+      b.copy(a).clampScalar(-0.4, 0.4);
+      a.sub(b).normalize().multiplyScalar(0.1).add(b);
+      p.setXYZ(i, a.x, a.y, a.z);
+    }
+    box2.computeVertexNormals();
+    return r.artShapes = { box: box2, capsule: new uo(1, 1, 4, 12), sphere: new Dr(1, 16, 12), tube: new Sr(1, 1, 1, 16), ring: new Co(1, 0.16, 6, 16) };
+  }
+  function material(r, color, kind = "metal") {
+    r.artMaterials ||= /* @__PURE__ */ new Map();
+    const key = color + kind;
+    if (r.artMaterials.has(key)) return r.artMaterials.get(key);
+    const canvas2 = document.createElement("canvas");
+    canvas2.width = canvas2.height = 128;
+    const c = canvas2.getContext("2d");
+    c.fillStyle = color;
+    c.fillRect(0, 0, 128, 128);
+    let n = 137;
+    const random = () => ((n = Math.imul(n, 1664525) + 1013904223) >>> 0) / 4294967296;
+    for (let i = 0; i < 1400; i++) {
+      c.fillStyle = random() > 0.5 ? "#ffffff0b" : "#00000012";
+      c.fillRect(random() * 128, random() * 128, kind === "cloth" ? 1 : 5, 1);
+    }
+    if (kind === "cloth") {
+      c.strokeStyle = "#00000018";
+      c.lineWidth = 1;
+      for (let i = 0; i < 128; i += 4) {
+        c.beginPath();
+        c.moveTo(i, 0);
+        c.lineTo(i, 128);
+        c.moveTo(0, i);
+        c.lineTo(128, i);
+        c.stroke();
+      }
+    }
+    const map = new sh(canvas2);
+    map.colorSpace = Xe;
+    map.wrapS = map.wrapT = lr;
+    const props = { map, color: "#ffffff" };
+    let m;
+    if (r.softwareGPU) m = new Bo(props);
+    else m = new Ur({ ...props, metalness: kind === "metal" ? 0.65 : 0.04, roughness: kind === "metal" ? 0.37 : kind === "rubber" ? 0.88 : 0.75, bumpMap: map, bumpScale: kind === "skin" ? 4e-4 : 15e-4 });
+    r.artMaterials.set(key, m);
+    return m;
+  }
+  function part(r, parent, shape, color, kind, x, y, z, sx2, sy2, sz) {
+    const geometry = shape === "box" && r.softwareGPU && r.appliedGraphicsQuality !== "high" ? r.geometries.box : shapes(r)[shape];
+    const m = new _e(geometry, material(r, color, kind));
+    m.position.set(x, y, z);
+    m.scale.set(sx2, sy2, sz);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    parent.add(m);
+    return m;
+  }
+  var box = (r, p, x, y, z, w, h, d2, col, kind = "metal") => part(r, p, "box", col, kind, x, y, z, w, h, d2);
+  var ball = (r, p, x, y, z, sx2, sy2, sz, col, kind = "skin") => part(r, p, "sphere", col, kind, x, y, z, sx2, sy2, sz);
+  function barrel(r, p, x, y, z, length, radius, color) {
+    const m = part(r, p, "tube", color, "metal", x, y, z, radius, length, radius);
+    m.rotation.z = Math.PI / 2;
+    return m;
+  }
+  function limb(r, parent, from, to, radius, color) {
+    const a = new C(...from), b = new C(...to), length = a.distanceTo(b);
+    const m = part(r, parent, "capsule", color, "cloth", 0, 0, 0, radius, length / 3, radius);
+    m.position.copy(a).add(b).multiplyScalar(0.5);
+    m.quaternion.setFromUnitVectors(new C(0, 1, 0), b.sub(a).normalize());
+    return m;
+  }
+  function detailedWeapon(r, id2 = "arclight", fit = {}) {
+    const family = { kestrel9: "pistol", hush45: "pistol", burst9: "pistol", needle: "smg", vector45: "smg", breach12: "shotgun", cyclone12: "shotgun", arclight: "rifle", bullpup: "bullpup", trident: "rifle", sentinel: "dmr", longwatch: "sniper", tempest: "lmg", coil: "energy" }[id2] || "rifle";
+    const pistol = family === "pistol", long2 = ["sniper", "dmr", "lmg"].includes(family), length = pistol ? 0.29 : family === "smg" ? 0.52 : long2 ? 0.96 : 0.76;
+    const gun = new ii(), dark = "#242e34", steel = "#697478", poly = family === "shotgun" ? "#746347" : family === "energy" ? "#497078" : "#414d4b";
+    const B = (x, y, z, w, h, d2, c = dark, k = "metal") => box(r, gun, x, y, z, w, h, d2, c, k), T = (x, y, z, l, rad, c = steel) => barrel(r, gun, x, y, z, l, rad, c);
+    gun.userData.family = family;
+    gun.userData.artRevision = 2;
+    B(length * 0.23, 0, 0, length * 0.48, 0.105, 0.085, poly);
+    B(length * 0.29, 0.05, 0, length * 0.4, 0.04, 0.072, steel);
+    B(length * 0.19, -0.065, 0, 0.14, 0.045, 0.082, dark);
+    const grip = B(length * 0.13, -0.145, 0, 0.063, 0.17, 0.061, dark, "rubber");
+    grip.rotation.z = 0.22;
+    B(length * 0.24, -0.105, 0, 0.1, 0.012, 0.049);
+    B(length * 0.285, -0.079, 0, 0.012, 0.055, 0.049);
+    B(length * 0.21, -0.078, 0, 0.012, 0.036, 0.015, steel);
+    B(length * 0.29, 0.017, 0.046, 0.095, 0.033, 8e-3, "#111b21");
+    B(length * 0.29, 0.032, 0.052, 0.076, 6e-3, 0.012, steel);
+    B(length * 0.2, 0.014, -0.057, 0.045, 0.018, 0.03, steel);
+    B(length * 0.13, -0.028, 0.049, 0.034, 9e-3, 0.01, steel);
+    for (const x of [length * 0.08, length * 0.36]) for (const z of [-0.048, 0.048]) {
+      const pin = T(x, -0.02, z, 6e-3, 8e-3, "#a5aaa3");
+      pin.rotation.set(Math.PI / 2, 0, 0);
+    }
+    for (let i = 0; i < 4; i++) B(length * 0.13, -0.095 - i * 0.022, 0.032, 0.051, 6e-3, 5e-3, "#65716b", "rubber");
+    const magX = family === "bullpup" ? -0.07 : length * 0.39, magH = fit.magazine === "extendedMag" ? 0.29 : fit.magazine === "quickMag" ? 0.15 : pistol ? 0.11 : 0.21;
+    const magazine2 = B(magX, -0.07 - magH / 2, 0, pistol ? 0.055 : 0.082, magH, 0.058, "#46504e");
+    magazine2.rotation.z = pistol ? 0 : -0.1;
+    for (let i = 0; i < 3; i++) B(magX - 0.027 + i * 0.027, -0.09 - magH / 2, 0.031, 7e-3, magH * 0.68, 5e-3, "#252f30");
+    B(magX, -0.073 - magH, 0, pistol ? 0.062 : 0.092, 0.018, 0.069, "#202b2f", "rubber");
+    if (fit.magazine === "drum" || family === "lmg" || id2 === "cyclone12") T(magX, -0.19, 0, 0.13, 0.105, poly).rotation.set(Math.PI / 2, 0, 0);
+    if (!pistol) {
+      B(-0.12, -7e-3, 0, 0.24, 0.08, 0.07, poly, "rubber");
+      B(-0.235, -0.023, 0, 0.05, 0.15, 0.1, dark, "rubber");
+      B(-0.11, -0.067, 0, 0.16, 0.025, 0.065, steel);
+    }
+    if (pistol) {
+      B(length * 0.21, 0.035, 0, length * 0.68, 0.065, 0.075, steel);
+      for (let i = 0; i < 5; i++) B(0.025 + i * 0.012, 0.033, 0.04, 4e-3, 0.05, 4e-3, dark);
+    } else {
+      B(length * 0.61, 0, 0, length * 0.33, 0.085, 0.09, poly);
+      for (let i = 0; i < 5; i++) for (const z of [-0.048, 0.048]) B(length * (0.49 + i * 0.044), 8e-3, z, 0.018, 0.027, 5e-3, "#17232a");
+      for (let i = 0; i < 9; i++) B(length * (0.13 + i * 0.072), 0.079, 0, 0.017, 0.018, 0.105, steel);
+    }
+    T(length * 0.81, 8e-3, 0, length * 0.27, pistol ? 0.016 : 0.02, steel);
+    T(length * 0.945, 8e-3, 0, 0.055, 0.029, dark);
+    T(length * 0.975, 8e-3, 0, 5e-3, 0.019, "#0b1114");
+    let muzzleX = length * 0.98;
+    if (fit.muzzle === "suppressor" || id2 === "hush45") {
+      T(muzzleX + 0.11, 8e-3, 0, 0.23, 0.041, dark);
+      for (const d2 of [0.02, 0.18]) T(muzzleX + d2, 8e-3, 0, 0.012, 0.043, steel);
+      muzzleX += 0.23;
+      T(muzzleX, 8e-3, 0, 7e-3, 0.023, "#090f13");
+    } else if (fit.muzzle) {
+      T(muzzleX, 8e-3, 0, 0.07, 0.036, steel);
+      for (let i = 0; i < 3; i++) B(muzzleX - 0.02 + i * 0.017, 0.038, 0, 8e-3, 8e-3, 0.023, "#0e191d");
+      muzzleX += 0.035;
+    }
+    if (family === "shotgun") {
+      T(length * 0.68, -0.045, 0, length * 0.45, 0.019, steel);
+      B(length * 0.58, -0.07, 0, 0.2, 0.07, 0.105, "#79664c", "rubber");
+      for (let i = 0; i < 7; i++) B(length * 0.46 + i * 0.024, -0.072, 0.054, 9e-3, 0.055, 6e-3, dark);
+    }
+    if (family === "energy") for (let i = 0; i < 5; i++) {
+      B(length * 0.53 + i * 0.052, 0, 0, 0.018, 0.12, 0.11, "#6cb7b7");
+      B(length * 0.53 + i * 0.052, 0.065, 0, 0.012, 8e-3, 0.075, "#bee9dc");
+    }
+    for (const x of [length * 0.1, length * 0.8]) {
+      B(x, 0.1, -0.028, 0.023, 0.05, 0.012);
+      B(x, 0.1, 0.028, 0.023, 0.05, 0.012);
+      B(x, 0.076, 0, 0.025, 0.012, 0.07);
+    }
+    const optic = fit.optic || (["sniper", "dmr"].includes(family) ? "scope3" : null);
+    if (optic) {
+      B(length * 0.29, 0.1, 0, 0.15, 0.035, 0.078, dark);
+      if (["scope3", "scope6"].includes(optic) || ["sniper", "dmr"].includes(family)) {
+        T(length * 0.31, 0.16, 0, 0.22, 0.035, dark);
+        for (const x of [length * 0.2, length * 0.43]) {
+          T(x, 0.16, 0, 0.02, 0.043, steel);
+          T(x + 0.011, 0.16, 0, 3e-3, 0.031, "#385f68");
+        }
+      } else {
+        B(length * 0.3, 0.145, -0.043, 0.075, 0.09, 0.013);
+        B(length * 0.3, 0.145, 0.043, 0.075, 0.09, 0.013);
+        B(length * 0.3, 0.193, 0, 0.075, 0.012, 0.094);
+      }
+    }
+    if (fit.underbarrel) {
+      if (fit.underbarrel === "bipod") {
+        for (const z of [-1, 1]) {
+          const leg = B(length * 0.7, -0.15, z * 0.065, 0.018, 0.22, 0.018, steel);
+          leg.rotation.x = z * 0.3;
+        }
+      } else {
+        const fore = B(length * 0.61, -0.14, 0, 0.043, 0.15, 0.05, dark, "rubber");
+        fore.rotation.z = -0.08;
+      }
+    }
+    if (fit.rail) {
+      B(length * 0.63, 0.01, 0.078, 0.12, 0.049, 0.048, dark);
+      T(length * 0.69, 0.01, 0.078, 0.01, 0.017, "#cad7bb");
+    }
+    const muzzle = new ee();
+    muzzle.position.set(muzzleX, 8e-3, 0);
+    gun.add(muzzle);
+    gun.userData.muzzle = muzzle;
+    gun.userData.length = length;
+    return gun;
+  }
+  function detailedHuman(r, group, parts, { type, infected: infected2, player, friendly }) {
+    group.userData.artRevision = 2;
+    const uniform = infected2 ? "#6d7563" : friendly ? "#8c9b91" : type === "heavy" ? "#6f6955" : "#455b65", armor = "#29383f", skin = infected2 ? "#a3ab90" : "#b19a81";
+    const B = (p, x, y, z, w, h, d2, c = uniform, k = "cloth") => box(r, p, x, y, z, w, h, d2, c, k), S2 = (p, x, y, z, sx2, sy2, sz, c = skin) => ball(r, p, x, y, z, sx2, sy2, sz, c);
+    B(group, 0, 0.88, 0, 0.26, 0.23, 0.39, armor);
+    S2(group, 0, 1.15, 0, 0.165, 0.28, 0.245, uniform);
+    B(group, 0.12, 1.18, 0, 0.12, 0.36, 0.36, armor);
+    B(group, -0.155, 1.2, 0, 0.075, 0.32, 0.32, armor);
+    for (const side of [-1, 1]) {
+      B(group, 0.03, 1.18, side * 0.195, 0.045, 0.36, 0.035, "#77847c");
+      for (let i = 0; i < 3; i++) B(group, 0.194, 1.08 + i * 0.065, side * 0.09, 0.05, 0.045, 0.068, "#5d6f6c");
+      B(group, 0.04, 0.91, side * 0.225, 0.14, 0.14, 0.08, "#4f5e59");
+    }
+    S2(group, 0, 1.46, 0, 0.065, 0.09, 0.07);
+    S2(group, 0, 1.61, 0, 0.13, 0.168, 0.125);
+    S2(group, 0.065, 1.54, 0, 0.083, 0.085, 0.09);
+    S2(group, 0.137, 1.615, 0, 0.036, 0.043, 0.031);
+    for (const side of [-1, 1]) {
+      S2(group, 5e-3, 1.61, side * 0.127, 0.035, 0.055, 0.02);
+      B(group, 0.119, 1.641, side * 0.056, 0.018, 0.011, 0.036, "#303531", "rubber");
+      B(group, 0.122, 1.663, side * 0.056, 0.012, 8e-3, 0.044, "#635b4e", "rubber");
+    }
+    B(group, 0.142, 1.553, 0, 9e-3, 9e-3, 0.045, "#6b5c50", "rubber");
+    if (!infected2 && type !== "civilian") {
+      S2(group, -0.018, 1.725, 0, 0.151, 0.104, 0.15, armor);
+      B(group, 0.025, 1.735, 0, 0.24, 0.025, 0.22, armor);
+      for (const side of [-1, 1]) {
+        B(group, -0.01, 1.65, side * 0.142, 0.09, 0.1, 0.035, armor);
+        B(group, 0.09, 1.64, side * 0.13, 0.025, 0.12, 0.014, "#8c9b8b");
+      }
+      B(group, -0.1, 1.744, 0, 0.05, 0.022, 0.095, "#6f827c");
+    }
+    if (infected2) {
+      B(group, 0.14, 1.59, 0.085, 0.013, 0.035, 0.025, "#687661");
+      S2(group, -0.035, 1.27, 0.17, 0.08, 0.12, 0.1, "#90987d");
+    }
+    for (const side of [-1, 1]) {
+      const leg = new ii();
+      leg.position.set(0, 0.84, side * 0.13);
+      group.add(leg);
+      limb(r, leg, [0, 0, 0], [0.015, -0.36, 0], 0.082, uniform);
+      limb(r, leg, [0.015, -0.36, 0], [-0.025, -0.68, 0], 0.065, uniform);
+      B(leg, 0.084, -0.36, 0, 0.058, 0.16, 0.14, armor);
+      B(leg, 0.055, -0.74, 0, 0.27, 0.13, 0.16, "#222e32", "rubber");
+      B(leg, 0.055, -0.806, 0, 0.28, 0.025, 0.17, "#111d22", "rubber");
+      parts.legs.push(leg);
+      const arm = new ii();
+      arm.position.set(0, 1.37, side * 0.245);
+      group.add(arm);
+      const elbow = [-0.025, -0.23, side * 0.035], hand = infected2 ? [0.34, -0.31, 0] : [side > 0 ? 0.3 : 0.49, -0.12, 0.3 - side * 0.245];
+      limb(r, arm, [0, 0, 0], elbow, 0.072, uniform);
+      limb(r, arm, elbow, hand, 0.059, uniform);
+      S2(arm, 0, 0, 0, 0.085, 0.11, 0.095, uniform);
+      B(arm, -0.025, -0.23, side * 0.045, 0.1, 0.1, 0.1, armor);
+      S2(arm, ...hand, 0.067, 0.06, 0.06, infected2 ? skin : "#35443f");
+      parts.arms.push(arm);
+    }
+    if (type === "shield") {
+      B(group, 0.56, 1, 0, 0.09, 1.35, 0.72, "#687476", "metal");
+      B(group, 0.61, 1.34, 0, 0.02, 0.21, 0.45, "#365a63", "metal");
+      B(group, 0.615, 0.62, 0, 0.015, 0.09, 0.56, "#d4b47d");
+    }
+    if (type === "radio" || type === "commander") {
+      B(group, -0.24, 1.2, 0, 0.13, 0.38, 0.3, armor);
+      limb(r, group, [-0.25, 1.4, -0.1], [-0.25, 1.95, -0.1], 9e-3, "#667d80");
+    }
+    if (type === "medic" || friendly) {
+      B(group, -0.19, 1.18, 0.08, 0.08, 0.25, 0.22, "#7d9e90");
+      B(group, -0.235, 1.2, 0.08, 0.01, 0.14, 0.04, "#e4e4ce");
+      B(group, -0.236, 1.2, 0.08, 0.01, 0.04, 0.14, "#e4e4ce");
+    }
+    if (type === "brute") {
+      B(group, 0.2, 1.2, 0, 0.1, 0.5, 0.43, "#7c8870");
+      S2(group, -0.12, 1.32, 0, 0.19, 0.27, 0.29, "#7e8a72");
+    }
+    if (type === "spitter") S2(group, -0.19, 1.24, 0, 0.12, 0.23, 0.22, "#9aa67c");
+    if (!infected2 && type !== "civilian") {
+      const weapon3 = r.buildWorldWeapon(player ? "arclight" : type === "sniper" ? "longwatch" : type === "heavy" ? "tempest" : "arclight");
+      weapon3.position.set(0.23, 1.2, 0.3);
+      group.add(weapon3);
+      parts.weapon = weapon3;
+    }
+  }
+  function detailedViewArms(r) {
+    const arms = new ii(), cloth = "#4c6268", glove = "#35433f";
+    for (const [elbow, hand] of [[[0.46, -0.47, -0.16], [0.28, -0.29, -0.48]], [[-0.34, -0.45, -0.2], [0.11, -0.3, -0.77]]]) {
+      limb(r, arms, elbow, hand, 0.065, cloth);
+      const mid = new C(...elbow).lerp(new C(...hand), 0.82);
+      const cuff = box(r, arms, mid.x, mid.y, mid.z, 0.14, 0.07, 0.12, "#293a3e", "cloth");
+      cuff.rotation.z = 0.15;
+      ball(r, arms, ...hand, 0.066, 0.048, 0.075, glove, "rubber");
+      box(r, arms, hand[0], hand[1] + 0.025, hand[2], 0.09, 0.025, 0.1, "#59665c", "rubber");
+      for (let i = 0; i < 4; i++) {
+        const finger = box(r, arms, hand[0] - 0.04 + i * 0.025, hand[1] - 0.018, hand[2] - 0.042, 0.022, 0.042, 0.065, glove, "rubber");
+        finger.rotation.x = -0.3;
+      }
+      ball(r, arms, hand[0] - 0.055, hand[1] - 0.012, hand[2] + 0.022, 0.025, 0.033, 0.046, glove, "rubber");
+    }
+    return arms;
+  }
+  var roundedGeometry = (r) => shapes(r).box;
+  function compactViewModel(group) {
+    group.updateMatrixWorld(true);
+    const inverse = group.matrixWorld.clone().invert(), buckets = /* @__PURE__ */ new Map(), originals = [];
+    group.traverse((mesh) => {
+      if (!mesh.isMesh) return;
+      const key = mesh.geometry.uuid + ":" + mesh.material.uuid;
+      let b = buckets.get(key);
+      if (!b) {
+        b = { geometry: mesh.geometry, material: mesh.material, matrices: [] };
+        buckets.set(key, b);
+      }
+      b.matrices.push(inverse.clone().multiply(mesh.matrixWorld));
+      originals.push(mesh);
+    });
+    for (const mesh of originals) mesh.parent.remove(mesh);
+    for (const b of buckets.values()) {
+      const mesh = new io(b.geometry, b.material, b.matrices.length);
+      b.matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.computeBoundingSphere();
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      group.add(mesh);
+    }
+    return group;
+  }
+  function disposeViewModel(group) {
+    group?.traverse((mesh) => {
+      if (mesh.isInstancedMesh) mesh.dispose();
+    });
+  }
+
   // deadcircuit/render3d.js
   var UNIT_SCALE = 0.02;
   var S = UNIT_SCALE;
@@ -20209,10 +20529,32 @@ void main() {
       this.webgl.shadowMap.enabled = true;
       this.webgl.shadowMap.type = rf;
       this.webgl.shadowMap.autoUpdate = false;
+      if (!this.softwareGPU) {
+        const faces = Array.from({ length: 6 }, (_, i) => {
+          const c = document.createElement("canvas");
+          c.width = c.height = 64;
+          const x = c.getContext("2d"), gradient = x.createLinearGradient(0, 0, 0, 64);
+          gradient.addColorStop(0, "#cbdde5");
+          gradient.addColorStop(0.52, i === 3 ? "#515d60" : "#81969e");
+          gradient.addColorStop(1, "#394b55");
+          x.fillStyle = gradient;
+          x.fillRect(0, 0, 64, 64);
+          if (i !== 3) {
+            x.fillStyle = "#e8ece6";
+            x.fillRect(12, 6, 35, 9);
+          }
+          return c;
+        });
+        this.scene.environment = new Ni(faces);
+        this.scene.environment.colorSpace = Xe;
+        this.scene.environment.needsUpdate = true;
+        this.scene.environmentIntensity = 0.6;
+      }
       this.camera = new Me(64, 1, 0.07, 260);
       this.camera.rotation.order = "YXZ";
       this.materials = /* @__PURE__ */ new Map();
       this.geometries = { box: new Ui(1, 1, 1), cylinder: new Sr(1, 1, 1, 10), sphere: new Dr(1, 10, 7), cone: new br(1, 1, 8), ring: new To(0.84, 1, 32), plane: new Ls(1, 1) };
+      this.geometries.rounded = roundedGeometry(this);
       this.textures = /* @__PURE__ */ new Map();
       this.levelTextures = [];
       this.world = new ii();
@@ -20252,6 +20594,10 @@ void main() {
       this.sun.shadow.bias = -4e-4;
       this.sun.shadow.normalBias = 0.035;
       this.scene.add(this.sun, this.sun.target);
+      this.fill = new Yo("#c1d6e5", 0.75);
+      this.fill.position.set(-2, 3, 1);
+      this.fill.target.position.set(0, 0, -2);
+      this.camera.add(this.fill, this.fill.target);
       this.hud = document.createElement("canvas");
       this.hud.id = "dc3dWorldHud";
       this.hud.setAttribute("aria-hidden", "true");
@@ -20267,7 +20613,10 @@ void main() {
       const b = this.canvas.getBoundingClientRect();
       this.width = Math.max(1, b.width || innerWidth);
       this.height = Math.max(1, b.height || innerHeight);
-      this.dpr = this.softwareGPU ? Math.min(1, devicePixelRatio || 1, Math.sqrt(25e4 / (this.width * this.height))) : Math.min(1.6, devicePixelRatio || 1, Math.sqrt(24e5 / (this.width * this.height)));
+      const quality = this.g?.settings?.graphicsQuality || "auto";
+      this.appliedGraphicsQuality = quality;
+      if (this.fill) this.fill.visible = !this.softwareGPU || quality === "high";
+      this.dpr = quality === "high" ? Math.min(1.5, devicePixelRatio || 1, Math.sqrt(3e6 / (this.width * this.height))) : quality === "performance" ? Math.min(1, devicePixelRatio || 1, Math.sqrt(25e4 / (this.width * this.height))) : this.softwareGPU ? Math.min(1, devicePixelRatio || 1, Math.sqrt(25e4 / (this.width * this.height))) : Math.min(1.6, devicePixelRatio || 1, Math.sqrt(24e5 / (this.width * this.height)));
       this.webgl.setPixelRatio(Math.max(0.4, this.dpr));
       this.webgl.setSize(this.width, this.height, false);
       this.camera.aspect = this.width / this.height;
@@ -20334,6 +20683,9 @@ void main() {
     }
     B(x, y, z, w, h, d2, color, options = {}) {
       this.batch("box", color, x, y, z, w, h, d2, 0, options);
+    }
+    RB(x, y, z, w, h, d2, color, options = {}) {
+      this.batch(this.softwareGPU && this.appliedGraphicsQuality !== "high" ? "box" : "rounded", color, x, y, z, w, h, d2, 0, options);
     }
     C(x, y, z, r, h, color, options = {}) {
       this.batch("cylinder", color, x, y, z, r, h, r, 0, options);
@@ -20446,10 +20798,11 @@ void main() {
       }
       const texture = new sh(canvas2);
       texture.colorSpace = Xe;
+      texture.wrapS = texture.wrapT = lr;
       texture.anisotropy = Math.min(4, this.webgl.capabilities.getMaxAnisotropy());
-      const material = this.softwareGPU ? new Bo({ map: texture }) : new Ur({ map: texture, roughness: 0.83, metalness: 0.04 });
-      this.wallMaterials.set(key, material);
-      return material;
+      const material2 = this.softwareGPU ? new Bo({ map: texture }) : new Ur({ map: texture, roughness: 0.83, metalness: 0.04 });
+      this.wallMaterials.set(key, material2);
+      return material2;
     }
     makeBackdrop() {
       this.world.clear();
@@ -20476,6 +20829,8 @@ void main() {
       this.sun.target.updateMatrixWorld(true);
     }
     clearLevel() {
+      for (const geometry of this.wallGeometries || []) geometry.dispose();
+      this.wallGeometries = [];
       for (const mesh of this.lootVisuals.values()) mesh.count = 0;
       if (this.grenadeVisual) this.grenadeVisual.count = 0;
       for (const batch of this.actorBatches.values()) batch.mesh.dispose();
@@ -20534,7 +20889,18 @@ void main() {
       let color = kind === "cover" ? def.material === "wood" ? "#887550" : "#637a79" : def.material === "metal" ? "#71838b" : p.wall;
       const options = def.material === "glass" ? { color: "#a6d2d6", transparent: true, opacity: 0.34, roughness: 0.18, metalness: 0.25 } : {};
       const mesh = this.box(this.world, (d2.minX + d2.maxX) / 2, d2.height / 2, (d2.minZ + d2.maxZ) / 2, d2.maxX - d2.minX, d2.height, d2.maxZ - d2.minZ, color, options);
-      if (kind === "wall" && def.material !== "glass") mesh.material = this.wallMaterial(this.levelRef?.theme || "station", color);
+      if (kind === "wall" && def.material !== "glass") {
+        mesh.material = this.wallMaterial(this.levelRef?.theme || "station", color);
+        mesh.geometry = this.geometries.box.clone();
+        const uv2 = mesh.geometry.attributes.uv, n = mesh.geometry.attributes.normal;
+        for (let i = 0; i < uv2.count; i++) {
+          const horizontal = Math.abs(n.getX(i)) > 0.5 ? d2.maxZ - d2.minZ : d2.maxX - d2.minX;
+          uv2.setXY(i, uv2.getX(i) * horizontal / 3, uv2.getY(i) * d2.height / 3);
+        }
+        uv2.needsUpdate = true;
+        this.wallGeometries ||= [];
+        this.wallGeometries.push(mesh.geometry);
+      }
       mesh.userData.kind = kind;
       mesh.userData.sourceId = def.id;
       const bounds = new we(v(d2.minX, 0, d2.minZ), v(d2.maxX, d2.height, d2.maxZ));
@@ -20572,49 +20938,49 @@ void main() {
         return;
       }
       if (type === "bench") {
-        this.B(x, 0.68, z, w, 0.16, d2, "#9a8d6b");
-        this.B(x, 0.38, z - d2 * 0.3, w * 0.84, 0.6, 0.09, "#485f69");
-        this.B(x - w * 0.35, 0.3, z, 0.09, 0.6, d2 * 0.7, "#596c70");
-        this.B(x + w * 0.35, 0.3, z, 0.09, 0.6, d2 * 0.7, "#596c70");
+        this.RB(x, 0.68, z, w, 0.16, d2, "#9a8d6b");
+        this.RB(x, 0.38, z - d2 * 0.3, w * 0.84, 0.6, 0.09, "#485f69");
+        this.RB(x - w * 0.35, 0.3, z, 0.09, 0.6, d2 * 0.7, "#596c70");
+        this.RB(x + w * 0.35, 0.3, z, 0.09, 0.6, d2 * 0.7, "#596c70");
       } else if (type === "car") {
-        this.B(x, 0.57, z, w, 0.78, d2, "#637b83");
-        this.B(x, 0.98, z, w * 0.58, 0.62, d2 * 0.84, "#7f9193");
-        this.B(x + w * 0.3, 1.02, z, 0.035, 0.37, d2 * 0.68, "#254856", { metalness: 0.3, roughness: 0.25 });
+        this.RB(x, 0.57, z, w, 0.78, d2, "#637b83");
+        this.RB(x, 0.98, z, w * 0.58, 0.62, d2 * 0.84, "#7f9193");
+        this.RB(x + w * 0.3, 1.02, z, 0.035, 0.37, d2 * 0.68, "#254856", { metalness: 0.3, roughness: 0.25 });
         for (const a of [-1, 1]) for (const b of [-1, 1]) {
-          this.B(x + a * w * 0.33, 0.32, z + b * d2 * 0.48, w * 0.2, 0.48, 0.15, "#253039");
+          this.RB(x + a * w * 0.33, 0.32, z + b * d2 * 0.48, w * 0.2, 0.48, 0.15, "#253039");
         }
-        this.B(x + w * 0.49, 0.62, z, w * 0.015, 0.15, d2 * 0.63, "#e6d39b", { emissive: "#f2cd83", emissiveIntensity: 0.35 });
+        this.RB(x + w * 0.49, 0.62, z, w * 0.015, 0.15, d2 * 0.63, "#e6d39b", { emissive: "#f2cd83", emissiveIntensity: 0.35 });
       } else if (type === "bed") {
-        this.B(x, 0.66, z, w, 0.14, d2, "#97aaa2");
-        this.B(x, 0.82, z, w * 0.9, 0.21, d2 * 0.86, "#d0d7c5");
-        this.B(x - w * 0.28, 0.98, z, w * 0.22, 0.13, d2 * 0.72, "#e6e5ce");
-        this.B(x + w * 0.12, 0.97, z, w * 0.55, 0.13, d2 * 0.78, "#709f93");
+        this.RB(x, 0.66, z, w, 0.14, d2, "#97aaa2");
+        this.RB(x, 0.82, z, w * 0.9, 0.21, d2 * 0.86, "#d0d7c5");
+        this.RB(x - w * 0.28, 0.98, z, w * 0.22, 0.13, d2 * 0.72, "#e6e5ce");
+        this.RB(x + w * 0.12, 0.97, z, w * 0.55, 0.13, d2 * 0.78, "#709f93");
         for (const a of [-1, 1]) for (const b of [-1, 1]) this.C(x + a * w * 0.4, 0.35, z + b * d2 * 0.37, 0.045, 0.7, "#839b9b");
       } else if (type === "cabinet" || type === "server") {
-        this.B(x, 1.25, z, w, 2.5, d2, "#3c5663");
-        this.B(x, 2.54, z, w + 0.05, 0.07, d2 + 0.05, "#8aa19f");
+        this.RB(x, 1.25, z, w, 2.5, d2, "#3c5663");
+        this.RB(x, 2.54, z, w + 0.05, 0.07, d2 + 0.05, "#8aa19f");
         for (let y = 0.3; y < 2.3; y += 0.28) {
-          this.B(x + w * 0.505, y, z, w * 0.015, 0.16, d2 * 0.8, "#192e3b");
-          this.B(x + w * 0.516, y + 0.05, z + d2 * 0.2, 0.012, 0.035, 0.12, p.accent, { emissive: p.accent, emissiveIntensity: 0.7 });
+          this.RB(x + w * 0.505, y, z, w * 0.015, 0.16, d2 * 0.8, "#192e3b");
+          this.RB(x + w * 0.516, y + 0.05, z + d2 * 0.2, 0.012, 0.035, 0.12, p.accent, { emissive: p.accent, emissiveIntensity: 0.7 });
         }
       } else if (type === "vent") {
-        this.B(x, 0.8, z, w, 1.45, d2, "#718a8e");
-        for (let y = 0.2; y < 1.4; y += 0.14) this.B(x + w * 0.505, y, z, 0.025, 0.05, d2 * 0.8, "#314a56");
-        this.B(x, 1.55, z, w * 0.9, 0.08, d2 * 0.9, "#a7b6ad");
+        this.RB(x, 0.8, z, w, 1.45, d2, "#718a8e");
+        for (let y = 0.2; y < 1.4; y += 0.14) this.RB(x + w * 0.505, y, z, 0.025, 0.05, d2 * 0.8, "#314a56");
+        this.RB(x, 1.55, z, w * 0.9, 0.08, d2 * 0.9, "#a7b6ad");
       } else if (type === "generator") {
-        this.B(x, 0.68, z, w, 1.3, d2, "#6b7b67");
-        this.B(x, 1.39, z, w * 0.86, 0.08, d2 * 0.8, "#a5af8f");
+        this.RB(x, 0.68, z, w, 1.3, d2, "#6b7b67");
+        this.RB(x, 1.39, z, w * 0.86, 0.08, d2 * 0.8, "#a5af8f");
         this.C(x, 1.54, z, Math.min(w, d2) * 0.26, 0.22, "#425b5d");
-        for (let i = 0; i < 4; i++) this.B(x - w * 0.36 + i * w * 0.24, 0.76, z + d2 * 0.505, 0.08, 0.67, 0.03, "#283d47");
-        this.B(x + w * 0.51, 0.9, z, 0.035, 0.25, d2 * 0.35, p.trim, { emissive: p.trim, emissiveIntensity: 0.25 });
+        for (let i = 0; i < 4; i++) this.RB(x - w * 0.36 + i * w * 0.24, 0.76, z + d2 * 0.505, 0.08, 0.67, 0.03, "#283d47");
+        this.RB(x + w * 0.51, 0.9, z, 0.035, 0.25, d2 * 0.35, p.trim, { emissive: p.trim, emissiveIntensity: 0.25 });
       } else if (type === "container" || type === "train") {
         const h = type === "train" ? 2.45 : 2.1;
-        this.B(x, h / 2, z, w, h, d2, type === "train" ? "#68828a" : "#738879");
-        this.B(x, h + 0.07, z, w + 0.06, 0.14, d2 + 0.06, "#a6b7aa");
-        for (let a = -w / 2 + 0.18; a < w / 2; a += 0.44) this.B(x + a, h / 2, z + d2 * 0.51, 0.045, h * 0.9, 0.025, "#a2b6b1");
+        this.RB(x, h / 2, z, w, h, d2, type === "train" ? "#68828a" : "#738879");
+        this.RB(x, h + 0.07, z, w + 0.06, 0.14, d2 + 0.06, "#a6b7aa");
+        for (let a = -w / 2 + 0.18; a < w / 2; a += 0.44) this.RB(x + a, h / 2, z + d2 * 0.51, 0.045, h * 0.9, 0.025, "#a2b6b1");
         if (type === "train") {
-          for (let a = -w / 2 + 0.5; a < w / 2; a += 1.05) this.B(x + a, 1.7, z - d2 * 0.51, 0.65, 0.65, 0.03, "#284c5d");
-          this.B(x, 0.55, z - d2 * 0.515, w, 0.13, 0.03, p.trim);
+          for (let a = -w / 2 + 0.5; a < w / 2; a += 1.05) this.RB(x + a, 1.7, z - d2 * 0.51, 0.65, 0.65, 0.03, "#284c5d");
+          this.RB(x, 0.55, z - d2 * 0.515, w, 0.13, 0.03, p.trim);
         }
       } else if (type === "tree") {
         this.C(x, 1.2, z, 0.14, 2.4, "#6b6850");
@@ -20626,26 +20992,26 @@ void main() {
       } else if (type === "tank") {
         this.C(x, 1, z, Math.min(w, d2) / 2, 2, "#8ca5a4");
         this.C(x, 2.05, z, Math.min(w, d2) * 0.48, 0.1, "#b8c6b8");
-        this.B(x, 2.2, z, 0.35, 0.2, 0.35, "#3d5a65");
+        this.RB(x, 2.2, z, 0.35, 0.2, 0.35, "#3d5a65");
       } else if (type === "statue") {
-        this.B(x, 0.38, z, w, 0.76, d2, "#928b79");
+        this.RB(x, 0.38, z, w, 0.76, d2, "#928b79");
         this.batch("sphere", "#c0b496", x, 1.25, z, 0.35, 0.65, 0.3);
         this.batch("sphere", "#d3c4a5", x, 2, z, 0.25, 0.3, 0.25);
-        this.B(x, 0.94, z, 0.7, 0.15, 0.48, "#b4a48c");
+        this.RB(x, 0.94, z, 0.7, 0.15, 0.48, "#b4a48c");
       } else if (type === "console") {
-        this.B(x, 0.7, z, w, 1.4, d2, "#3c5663");
-        this.B(x + w * 0.51, 1.05, z, 0.03, 0.5, d2 * 0.75, p.accent, { emissive: p.accent, emissiveIntensity: 0.5 });
-        this.B(x, 1.43, z, w * 0.9, 0.08, d2 * 0.9, "#8da4a0");
+        this.RB(x, 0.7, z, w, 1.4, d2, "#3c5663");
+        this.RB(x + w * 0.51, 1.05, z, 0.03, 0.5, d2 * 0.75, p.accent, { emissive: p.accent, emissiveIntensity: 0.5 });
+        this.RB(x, 1.43, z, w * 0.9, 0.08, d2 * 0.9, "#8da4a0");
       } else if (type === "pipe") {
-        this.B(x, 0.4, z, w, 0.3, d2, "#8aaba8");
-        this.B(x, 0.56, z, w, 0.05, d2 * 0.6, "#c3cbb5");
+        this.RB(x, 0.4, z, w, 0.3, d2, "#8aaba8");
+        this.RB(x, 0.56, z, w, 0.05, d2 * 0.6, "#c3cbb5");
       } else if (type === "light") {
-        this.B(x, 2.8, z, w * 0.6, 0.12, d2 * 0.3, p.accent, { emissive: p.accent, emissiveIntensity: 1.3 });
+        this.RB(x, 2.8, z, w * 0.6, 0.12, d2 * 0.3, p.accent, { emissive: p.accent, emissiveIntensity: 1.3 });
       } else {
-        this.B(x, 0.49, z, w, 0.98, d2, "#8a805e");
-        this.B(x, 0.99, z, w + 0.03, 0.05, d2 + 0.03, "#b8ad8a");
-        this.B(x, 0.5, z + d2 * 0.505, w * 0.08, 0.85, 0.025, "#c4b692");
-        this.B(x, 0.5, z - d2 * 0.505, w * 0.08, 0.85, 0.025, "#c4b692");
+        this.RB(x, 0.49, z, w, 0.98, d2, "#8a805e");
+        this.RB(x, 0.99, z, w + 0.03, 0.05, d2 + 0.03, "#b8ad8a");
+        this.RB(x, 0.5, z + d2 * 0.505, w * 0.08, 0.85, 0.025, "#c4b692");
+        this.RB(x, 0.5, z - d2 * 0.505, w * 0.08, 0.85, 0.025, "#c4b692");
       }
     }
     addSign(text, x, y, z, color = "#e5c789", width = 2.2) {
@@ -20829,6 +21195,13 @@ void main() {
           const side = i % 4, n = Math.floor(i / 4), x = side < 2 ? -12 + side * (w + 24) : n * w / 7, z = side >= 2 ? -12 + (side - 2) * (d2 + 24) : n * d2 / 7, h = 6 + hash2(l.id + ":" + i) % 150 / 10;
           this.B(x, h / 2 - 5, z, 5, h, 5, "#526d7d");
           this.B(x, h - 5 + 0.1, z, 5.2, 0.2, 5.2, "#8aa2aa");
+          for (let y = -2; y < h - 6; y += 2) {
+            for (const dx2 of [-1.5, 0, 1.5]) {
+              this.B(x + dx2, y, z + 2.51, 0.68, 0.85, 0.015, i % 4 === 0 ? "#c9aa72" : "#416779");
+              this.B(x + 2.51, y, z + dx2, 0.015, 0.85, 0.68, i % 4 === 0 ? "#c9aa72" : "#416779");
+            }
+          }
+          this.B(x + 0.8, h - 4.6, z, 0.9, 0.8, 1.1, "#415b67");
         }
       }
     }
@@ -20868,6 +21241,9 @@ void main() {
       this.exitGroup = group;
     }
     buildWeapon(id2 = "arclight", fittings = {}) {
+      return detailedWeapon(this, id2, fittings);
+    }
+    buildWorldWeapon(id2 = "arclight", fittings = {}) {
       const family = { kestrel9: "pistol", hush45: "pistol", burst9: "pistol", needle: "smg", vector45: "smg", breach12: "shotgun", cyclone12: "shotgun", arclight: "rifle", bullpup: "bullpup", trident: "rifle", sentinel: "dmr", longwatch: "sniper", tempest: "lmg", coil: "energy" }[id2] || "rifle", gun = new ii(), short = family === "pistol", len = short ? 0.34 : family === "smg" ? 0.58 : ["sniper", "dmr", "lmg"].includes(family) ? 0.93 : 0.76;
       const metal = family === "shotgun" ? "#ab936c" : family === "energy" ? "#7fbec0" : family === "lmg" ? "#b3a88a" : family === "smg" ? "#9db6c0" : "#8fa39c", dark = "#2d4652", trim = family === "energy" ? "#8de0d9" : "#a4b2a9";
       this.box(gun, len * 0.3, 0, 0, len * 0.57, 0.12, 0.095, metal, { metalness: 0.5, roughness: 0.38 });
@@ -20938,76 +21314,7 @@ void main() {
           this.box(group, 0.8, h * 0.75, 0, 0.07, 0.16, 0.18, trim, { emissive: trim, emissiveIntensity: 0.5 });
           if (type === "warden") for (const z of [-0.38, 0.38]) this.box(group, 0.25, h * 0.87, z, 0.75, 0.12, 0.12, "#b6b99c");
         }
-      } else {
-        this.box(group, 0, 0.86, 0, 0.29, 0.26, 0.41, dark);
-        this.sphere(group, 0.02, 1.19, 0, 0.285, uniform, { x: 0.64, y: 1.08, z: 0.9 });
-        this.box(group, 0.22, 1.25, 0, 0.075, 0.4, 0.39, infected2 ? "#728467" : dark);
-        this.box(group, -0.19, 1.2, 0, 0.11, 0.35, 0.3, "#536c74");
-        this.box(group, -0.255, 1.18, 0, 0.025, 0.2, 0.22, dark);
-        for (const z of [-0.17, 0.17]) {
-          this.box(group, -0.15, 1.24, z, 0.055, 0.5, 0.055, "#a6b7a5");
-          this.box(group, 0.05, 0.91, z * 1.15, 0.13, 0.14, 0.11, "#819183");
-        }
-        this.box(group, 0.27, 1.42, 0, 0.05, 0.04, 0.25, trim);
-        this.sphere(group, 0.02, 1.61, 0, 0.205, infected2 ? "#b1bca2" : "#c1ad94", { x: 0.9, y: 1.12, z: 0.88 });
-        if (!infected2) {
-          this.sphere(group, -0.015, 1.7, 0, 0.215, dark, { x: 1.04, y: 0.75, z: 1.03 });
-          this.box(group, 0.191, 1.63, 0, 0.035, 0.082, 0.28, player ? "#8ed7d9" : "#dca482", { emissive: player ? "#407f87" : "#8b6050", emissiveIntensity: 0.15 });
-        }
-        for (const side of [-1, 1]) {
-          const leg = new ii();
-          leg.position.set(0, 0.79, side * 0.145);
-          group.add(leg);
-          this.cylinder(leg, 0, -0.18, 0, 0.092, 0.37, uniform);
-          this.cylinder(leg, 0, -0.48, 0, 0.078, 0.32, dark);
-          this.box(leg, 0.065, -0.72, 0, 0.29, 0.13, 0.17, "#263a44");
-          this.box(leg, 0.087, -0.34, 0, 0.065, 0.13, 0.15, "#a2aa97");
-          parts.legs.push(leg);
-          const arm = new ii();
-          arm.position.set(0.035, 1.38, side * 0.3);
-          group.add(arm);
-          if (infected2) {
-            this.bone(arm, [0, 0, 0], [0.08, -0.24, 0], 0.075, uniform);
-            this.bone(arm, [0.08, -0.24, 0], [0.4, -0.34, 0], 0.063, "#a9b99a");
-            this.sphere(arm, 0.4, -0.34, 0, 0.075, "#b9c5a4");
-          } else {
-            const elbow = side > 0 ? [-0.04, -0.22, 0.07] : [0.08, -0.22, 0.02], hand = side > 0 ? [0.32, -0.09, 0.12] : [0.55, -0.09, 0.72];
-            this.bone(arm, [0, 0, 0], elbow, 0.078, uniform);
-            this.bone(arm, elbow, hand, 0.067, uniform);
-            this.sphere(arm, ...elbow, 0.086, dark);
-            this.sphere(arm, ...hand, 0.07, "#c1ad94");
-            this.sphere(arm, 0, 0, 0, 0.13, uniform, { x: 1.05, y: 0.9, z: 1 });
-          }
-          parts.arms.push(arm);
-        }
-        if (type === "shield") {
-          this.box(group, 0.58, 1, 0, 0.12, 1.4, 0.78, "#87938c");
-          this.box(group, 0.652, 1.35, 0, 0.02, 0.28, 0.53, "#335867", { metalness: 0.3, roughness: 0.2 });
-          this.box(group, 0.66, 0.5, 0, 0.02, 0.1, 0.65, "#e5bd79");
-        }
-        if (type === "radio" || type === "commander") {
-          this.box(group, -0.25, 1.19, 0, 0.16, 0.44, 0.32, "#475d60");
-          this.cylinder(group, -0.25, 1.8, -0.14, 0.015, 0.8, "#c8cbb4");
-        }
-        if (type === "medic") {
-          this.box(group, -0.25, 1.2, 0, 0.12, 0.45, 0.33, "#b4ccaa");
-          this.box(group, -0.32, 1.2, 0, 0.025, 0.23, 0.06, "#5e8b77");
-          this.box(group, -0.325, 1.2, 0, 0.025, 0.06, 0.22, "#5e8b77");
-        }
-        if (type === "brute") {
-          this.box(group, 0.04, 1.2, 0, 0.5, 0.7, 0.74, "#879475");
-          this.box(group, 0.31, 1.25, 0, 0.09, 0.49, 0.57, "#a7af8c");
-        }
-        if (type === "spitter") {
-          this.sphere(group, -0.25, 1.25, 0, 0.26, "#b7c885", { x: 0.7, y: 1.2, z: 1 });
-        }
-        if (!infected2 && type !== "civilian") {
-          const weapon3 = this.buildWeapon(player ? "arclight" : type === "sniper" ? "longwatch" : type === "heavy" ? "tempest" : "arclight");
-          weapon3.position.set(0.23, 1.2, 0.3);
-          group.add(weapon3);
-          parts.weapon = weapon3;
-        }
-      }
+      } else detailedHuman(this, group, parts, { type, infected: infected2, player, friendly: a.friendly, x: a.x, y: a.y });
       const hitbox = new _e(this.geometries.cylinder, new Tn({ visible: false }));
       const radius = (a.r || 15) * S, localHeight = machine ? metrics.height : 1.75;
       hitbox.scale.set(radius, localHeight, radius);
@@ -21052,11 +21359,22 @@ void main() {
       if (!["drone", "turret", "warden"].includes(a.type)) group.scale.y = scaleY;
       const moving = move2 > 0.2 || player && Math.hypot(this.g?.controls?.x || 0, this.g?.controls?.y || 0) > 0.1;
       for (let i = 0; i < parts.legs.length; i++) {
-        const part = parts.legs[i];
-        if (a.type === "drone") part.rotation.y = this.time * 30;
-        else part.rotation.z = moving ? Math.sin(model.stride + i * Math.PI) * 0.55 : 0;
+        const part2 = parts.legs[i];
+        if (a.type === "drone") part2.rotation.y = this.time * 30;
+        else part2.rotation.z = moving ? Math.sin(model.stride + i * Math.PI) * 0.55 : 0;
       }
       if (a.faction === "infected") for (let i = 0; i < parts.arms.length; i++) parts.arms[i].rotation.z = -(a.state === "engage" ? 0.6 : 0.25) + Math.sin(this.time * 4 + i) * 0.08;
+      if (!player && parts.weapon) {
+        const near = Math.hypot(a.x - (this.g?.player?.x || 0), a.y - (this.g?.player?.y || 0)) < 600;
+        if (model.weaponNear !== near) {
+          group.remove(parts.weapon);
+          const id2 = a.type === "sniper" ? "longwatch" : a.type === "heavy" ? "tempest" : "arclight";
+          parts.weapon = near ? this.buildWeapon(id2) : this.buildWorldWeapon(id2);
+          parts.weapon.position.set(0.23, 1.2, 0.3);
+          group.add(parts.weapon);
+          model.weaponNear = near;
+        }
+      }
       if (player) {
         const id2 = this.g?.weapon || this.g?.profile?.loadout?.[a.weaponIndex || 0] || "arclight", fit = this.g?.profile?.fittings?.[id2] || {}, weaponKey = id2 + JSON.stringify(fit);
         if (model.weaponKey !== weaponKey) {
@@ -21125,8 +21443,11 @@ void main() {
     updateViewWeapon(g) {
       const id2 = g.weapon || g.profile?.loadout?.[g.player.weaponIndex || 0] || "arclight", fit = g.profile?.fittings?.[id2] || {}, key = id2 + JSON.stringify(fit);
       if (!this.viewWeapon || this.viewWeaponKey !== key) {
-        if (this.viewWeapon) this.camera.remove(this.viewWeapon);
-        this.viewWeapon = this.buildWeapon(id2, fit);
+        if (this.viewWeapon) {
+          disposeViewModel(this.viewWeapon);
+          this.camera.remove(this.viewWeapon);
+        }
+        this.viewWeapon = compactViewModel(this.buildWeapon(id2, fit));
         const flash = new ii();
         const glow = this.sphere(flash, 0, 0, 0, 0.06, "#ffdf96", { x: 1.8, y: 0.8, z: 0.8 }, { emissive: "#ffae3c", emissiveIntensity: 2 });
         glow.castShadow = false;
@@ -21142,13 +21463,7 @@ void main() {
         this.viewWeapon.scale.setScalar(0.82);
         this.camera.add(this.viewWeapon);
         if (!this.viewArms) {
-          this.viewArms = new ii();
-          this.bone(this.viewArms, [0.43, -0.48, -0.2], [0.28, -0.3, -0.48], 0.075, "#526a70");
-          this.bone(this.viewArms, [-0.34, -0.48, -0.25], [0.11, -0.31, -0.77], 0.07, "#526a70");
-          this.sphere(this.viewArms, 0.28, -0.3, -0.48, 0.075, "#303f42");
-          this.sphere(this.viewArms, 0.11, -0.31, -0.77, 0.075, "#303f42");
-          this.box(this.viewArms, 0.28, -0.3, -0.48, 0.14, 0.09, 0.12, "#374c4e");
-          this.box(this.viewArms, 0.11, -0.31, -0.77, 0.15, 0.09, 0.12, "#374c4e");
+          this.viewArms = compactViewModel(detailedViewArms(this));
           this.camera.add(this.viewArms);
         }
         this.viewWeaponKey = key;
@@ -21263,8 +21578,8 @@ void main() {
       const sphere = new be();
       for (const model of this.actorMap.values()) {
         if (model.player) {
-          model.group.traverse((part) => {
-            if (part.isMesh) part.visible = false;
+          model.group.traverse((part2) => {
+            if (part2.isMesh) part2.visible = false;
           });
           continue;
         }
@@ -21273,14 +21588,14 @@ void main() {
         sphere.center.y += model.metrics.height * 0.5;
         sphere.radius = Math.max(1.35, model.metrics.height * 0.7);
         const inView = this.actorFrustum.intersectsSphere(sphere);
-        model.group.traverse((part) => {
-          if (!part.isMesh || part === model.hitbox) return;
-          part.visible = false;
+        model.group.traverse((part2) => {
+          if (!part2.isMesh || part2 === model.hitbox) return;
+          part2.visible = false;
           if (!inView) return;
-          const key = part.geometry.uuid + ":" + part.material.uuid;
+          const key = part2.geometry.uuid + ":" + part2.material.uuid;
           let batch = this.actorBatches.get(key);
           if (!batch) {
-            const mesh = new io(part.geometry, part.material, 128);
+            const mesh = new io(part2.geometry, part2.material, 128);
             mesh.instanceMatrix.setUsage(mm);
             mesh.frustumCulled = false;
             mesh.castShadow = true;
@@ -21305,7 +21620,7 @@ void main() {
             batch.mesh = mesh;
             batch.capacity *= 2;
           }
-          batch.mesh.setMatrixAt(batch.count++, part.matrixWorld);
+          batch.mesh.setMatrixAt(batch.count++, part2.matrixWorld);
         });
       }
       for (const batch of this.actorBatches.values()) {
@@ -21551,6 +21866,16 @@ void main() {
     draw(g, dt = 1 / 60) {
       this.time += Math.min(0.1, Math.max(0, dt || 0));
       this.g = g;
+      if (this.appliedGraphicsQuality !== (g.settings?.graphicsQuality || "auto")) {
+        this.resize();
+        this.viewWeaponKey = null;
+        if (this.viewArms) {
+          disposeViewModel(this.viewArms);
+          this.camera.remove(this.viewArms);
+          this.viewArms = null;
+        }
+        if (g.level) this.buildLevel(g.level);
+      }
       if (!g?.level || !g.player) {
         if (this.levelRef) {
           this.clearLevel();
